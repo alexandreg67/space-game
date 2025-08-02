@@ -132,12 +132,6 @@ export interface ExplosionEffect {
   active: boolean;
 }
 
-export interface ShieldBreachEvent {
-  enemy: EnemyEntity;
-  position: Vector2D;
-  damage: number;
-  timestamp: number;
-}
 
 export interface ShieldZone {
   y: number; // Y position of the shield line

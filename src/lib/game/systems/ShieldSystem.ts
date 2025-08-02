@@ -1,12 +1,11 @@
 import { useGameStore } from '@/lib/stores/gameStore';
 import { releaseEnemyToPool } from '@/lib/game/utils/objectPool';
-import type { EnemyEntity, ShieldBreachEvent, ShieldZone } from '@/types/game';
+import type { EnemyEntity, ShieldZone } from '@/types/game';
 
 export class ShieldSystem {
   private gameWidth: number;
   private gameHeight: number;
   private shieldZone: ShieldZone;
-  private breachEvents: ShieldBreachEvent[] = [];
 
   constructor(gameWidth: number, gameHeight: number) {
     this.gameWidth = gameWidth;
@@ -39,8 +38,6 @@ export class ShieldSystem {
       this.handleShieldDepletion();
     }
 
-    // Clean up old breach events
-    this.cleanupBreachEvents();
   }
 
   // Check if enemies have breached the bottom shield zone
@@ -61,7 +58,6 @@ export class ShieldSystem {
   // Handle when an enemy breaches the shield zone
   private handleShieldBreach(enemy: EnemyEntity): void {
     const gameState = useGameStore.getState();
-    const now = Date.now();
 
     // Calculate damage based on enemy type and penetration depth
     const enemyBottom = enemy.position.y + enemy.size.y;
@@ -74,16 +70,6 @@ export class ShieldSystem {
     // Apply shield damage
     gameState.damageShield(damage);
 
-    // Create breach event for visual effects
-    const breachEvent: ShieldBreachEvent = {
-      enemy,
-      position: { x: enemy.position.x, y: this.shieldZone.y },
-      damage,
-      timestamp: now,
-    };
-    
-    
-    this.breachEvents.push(breachEvent);
 
 
     // Remove the enemy
@@ -134,37 +120,14 @@ export class ShieldSystem {
     releaseEnemyToPool(enemy);
   }
 
-  // Create visual effect for shield breach - No particles, just event tracking
-  private createShieldBreachEffect(_x: number, _y: number, _damage: number): void {
-    // No particle creation here - effects are handled by ShieldImpact component
-    // This method now just serves as a placeholder for any future shield breach logic
-  }
 
-  // Create effect for complete shield depletion - Simplified
-  private createShieldDepletionEffect(): void {
-    // No particle creation here - visual feedback handled by UI components
-  }
 
-  // Clean up old breach events
-  private cleanupBreachEvents(): void {
-    const now = Date.now();
-    this.breachEvents = this.breachEvents.filter(
-      event => now - event.timestamp < 5000 // Keep events for 5 seconds
-    );
-  }
 
   // Get shield zone for rendering
   getShieldZone(): ShieldZone {
     return this.shieldZone;
   }
 
-  // Get recent breach events for effects
-  getRecentBreachEvents(): ShieldBreachEvent[] {
-    const now = Date.now();
-    return this.breachEvents.filter(
-      event => now - event.timestamp < 1000 // Only events from last second
-    );
-  }
 
   // Update shield zone configuration
   updateShieldZone(config: { height?: number; active?: boolean }): void {
@@ -185,7 +148,6 @@ export class ShieldSystem {
       height: config.shieldHeight,
       active: true,
     };
-    this.breachEvents = [];
   }
 }
 
