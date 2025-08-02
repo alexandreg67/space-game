@@ -7,6 +7,7 @@ import { useGameStore } from "@/lib/stores/gameStore";
 import { initializePools } from "@/lib/game/utils/objectPool";
 import { enemySystem } from "@/lib/game/systems/EnemySystem";
 import { collisionSystem } from "@/lib/game/systems/CollisionSystem";
+import { shieldSystem } from "@/lib/game/systems/ShieldSystem";
 import { Vector2, MathUtils } from "@/lib/game/utils/math";
 import { getBulletFromPool } from "@/lib/game/utils/objectPool";
 import Player from "./Player";
@@ -14,6 +15,7 @@ import Enemy from "./Enemy";
 import Bullet from "./Bullet";
 import SpaceDustLayer from "./SpaceDustLayer";
 import SpeedBackground from "./SpeedBackground";
+import ShieldZone from "./ShieldZone";
 import HUD from "./UI/HUD";
 
 interface GameCanvasProps {
@@ -36,6 +38,7 @@ export default function GameCanvas({
   
   // Track pool initialization state to prevent timing issues
   const [poolsInitialized, setPoolsInitialized] = useState(false);
+  
 
   // Initialize game when component mounts (stable reference to avoid re-renders)
   useEffect(() => {
@@ -156,6 +159,7 @@ export default function GameCanvas({
     handleTouchMove,
     handleTouchEnd,
   ]);
+
 
   // Handle starting the game
   const handleStartGame = useCallback(() => {
@@ -344,6 +348,9 @@ export default function GameCanvas({
       // Check collisions
       collisionSystem.update();
 
+      // Update shield system
+      shieldSystem.update(deltaTime);
+
       // Continue the loop
       animationRef.current = requestAnimationFrame(gameLoop);
     },
@@ -377,18 +384,15 @@ export default function GameCanvas({
         height={height}
         style={{ display: "block" }}
       >
-        {/* Background Layer - Speed & Progression Background */}
+        {/* Background Layer - All background elements */}
         <Layer name="background" listening={false}>
           <SpeedBackground 
             width={width} 
             height={height} 
             offset={backgroundOffset}
           />
-        </Layer>
-
-        {/* Foreground Effects Layer - Minimal particles for depth */}
-        {poolsInitialized && (
-          <Layer name="foreground-effects" listening={false}>
+          {/* Space dust integrated into background layer */}
+          {poolsInitialized && (
             <SpaceDustLayer 
               width={width} 
               height={height} 
@@ -396,11 +400,20 @@ export default function GameCanvas({
               particleCount={8}
               speed={1.5}
             />
-          </Layer>
-        )}
+          )}
+        </Layer>
 
-        {/* Entities Layer */}
-        <Layer>
+        {/* Game Layer - All game entities and shield zone */}
+        <Layer name="game" listening={false}>
+          {/* Shield Zone - Behind entities */}
+          {player && (
+            <ShieldZone
+              width={width}
+              height={height}
+              shieldHeight={useGameStore.getState().config.shieldHeight}
+            />
+          )}
+
           {/* Player */}
           {player && player.active && <Player player={player} />}
 
@@ -419,8 +432,9 @@ export default function GameCanvas({
             ))}
         </Layer>
 
+
         {/* UI Layer */}
-        <Layer>
+        <Layer name="ui" listening={false}>
           <HUD width={width} height={height} />
         </Layer>
       </Stage>

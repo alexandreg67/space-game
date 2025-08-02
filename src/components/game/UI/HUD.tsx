@@ -14,6 +14,7 @@ export default function HUD({ width, height }: HUDProps) {
   const score = useGameStore((state) => state.score);
   const lives = useGameStore((state) => state.lives);
   const level = useGameStore((state) => state.level);
+  const player = useGameStore((state) => state.player);
 
   // Memoize the lives indicators array to prevent unnecessary re-renders
   const livesIndicators = useMemo(() => {
@@ -83,29 +84,70 @@ export default function HUD({ width, height }: HUDProps) {
         fontStyle="bold"
       />
 
-      {/* Health bar for current health display */}
-      <Group>
-        <Text
-          x={20}
-          y={height - 40}
-          text="Health:"
-          fontSize={14}
-          fontFamily="Arial"
-          fill="#ffffff"
-        />
+      {/* Shield Bar (using the original health bar position) */}
+      {player && (
+        <Group>
+          <Text
+            x={20}
+            y={height - 40}
+            text="Shield:"
+            fontSize={14}
+            fontFamily="Arial"
+            fill="#00ffff"
+          />
 
-        {/* Health bar background */}
-        <Rect
-          x={80}
-          y={height - 38}
-          width={200}
-          height={12}
-          fill="#333333"
-          stroke="#ffffff"
-          strokeWidth={1}
-          cornerRadius={6}
-        />
-      </Group>
+          {/* Shield bar background */}
+          <Rect
+            x={80}
+            y={height - 38}
+            width={200}
+            height={12}
+            fill="#333333"
+            stroke="#00ffff"
+            strokeWidth={1}
+            cornerRadius={6}
+          />
+
+          {/* Shield bar fill */}
+          <Rect
+            x={81}
+            y={height - 37}
+            width={Math.max(0, (player.shieldHealth / player.maxShieldHealth) * 198)}
+            height={10}
+            fill={
+              player.shieldHealth > player.maxShieldHealth * 0.6
+                ? "#00ffff"
+                : player.shieldHealth > player.maxShieldHealth * 0.3
+                ? "#ffff00"
+                : "#ff4400"
+            }
+            cornerRadius={5}
+          />
+
+          {/* Shield percentage text */}
+          <Text
+            x={290}
+            y={height - 40}
+            text={`${Math.round((player.shieldHealth / player.maxShieldHealth) * 100)}%`}
+            fontSize={12}
+            fontFamily="Arial"
+            fill="#00ffff"
+          />
+
+          {/* Shield status indicator */}
+          {player.shieldHealth <= 0 && (
+            <Text
+              x={360}
+              y={height - 40}
+              text="SHIELD DOWN!"
+              fontSize={12}
+              fontFamily="Arial"
+              fill="#ff0000"
+              fontStyle="bold"
+            />
+          )}
+        </Group>
+      )}
     </Group>
   );
 }

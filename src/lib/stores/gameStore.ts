@@ -39,6 +39,9 @@ interface GameStore extends GameState {
   createPlayer: () => void;
   updatePlayerPosition: (position: Vector2D) => void;
   updatePlayerHealth: (health: number) => void;
+  updatePlayerShield: (shieldHealth: number) => void;
+  regenerateShield: (deltaTime: number) => void;
+  damageShield: (damage: number) => void;
 
   // Entity management
   addEnemy: (enemy: EnemyEntity) => void;
@@ -76,6 +79,11 @@ const defaultConfig: GameConfig = {
   enemySpawnRate: 2000, // milliseconds
   maxBullets: 50,
   maxEnemies: 20,
+  // Shield configuration
+  shieldHeight: 50, // Height of protection zone from bottom
+  shieldRegenRate: 0.5, // Points per second regeneration
+  shieldRegenDelay: 3000, // Delay after damage before regen starts (ms)
+  shieldMaxHealth: 100, // Maximum shield health
 };
 
 const defaultInputState: InputState = {
@@ -143,6 +151,13 @@ export const useGameStore = create<GameStore>()(
           maxHealth: 100,
           shootCooldown: 0,
           canShoot: true,
+          // Shield system
+          shieldHealth: config.shieldMaxHealth,
+          maxShieldHealth: config.shieldMaxHealth,
+          shieldRegenRate: config.shieldRegenRate,
+          shieldRegenDelay: config.shieldRegenDelay,
+          lastShieldDamageTime: 0,
+          shieldActive: true,
         };
         set({ player });
       },
@@ -164,6 +179,57 @@ export const useGameStore = create<GameStore>()(
             ? {
                 ...state.player,
                 health: Math.max(0, Math.min(health, state.player.maxHealth)),
+              }
+            : null,
+        }));
+      },
+
+      updatePlayerShield: (shieldHealth: number) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                shieldHealth: Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth)),
+                shieldActive: shieldHealth > 0,
+              }
+            : null,
+        }));
+      },
+
+      regenerateShield: (deltaTime: number) => {
+        const state = get();
+        const now = Date.now();
+        
+        if (!state.player || !state.player.shieldActive) return;
+        
+        const timeSinceLastDamage = now - state.player.lastShieldDamageTime;
+        
+        // Only regenerate if enough time has passed since last damage
+        if (timeSinceLastDamage >= state.player.shieldRegenDelay && 
+            state.player.shieldHealth < state.player.maxShieldHealth) {
+          const regenAmount = (state.player.shieldRegenRate * deltaTime) / 1000;
+          const newShieldHealth = Math.min(
+            state.player.maxShieldHealth, 
+            state.player.shieldHealth + regenAmount
+          );
+          
+          actions.updatePlayerShield(newShieldHealth);
+        }
+      },
+
+      damageShield: (damage: number) => {
+        const state = get();
+        if (!state.player) return;
+        
+        const newShieldHealth = Math.max(0, state.player.shieldHealth - damage);
+        
+        set((prevState) => ({
+          player: prevState.player
+            ? {
+                ...prevState.player,
+                shieldHealth: newShieldHealth,
+                shieldActive: newShieldHealth > 0,
+                lastShieldDamageTime: Date.now(),
               }
             : null,
         }));
@@ -390,6 +456,9 @@ export const useGameActions = () =>
     resetGame: state.resetGame,
     updatePlayerPosition: state.updatePlayerPosition,
     updatePlayerHealth: state.updatePlayerHealth,
+    updatePlayerShield: state.updatePlayerShield,
+    regenerateShield: state.regenerateShield,
+    damageShield: state.damageShield,
     addEnemy: state.addEnemy,
     removeEnemy: state.removeEnemy,
     addBullet: state.addBullet,

@@ -113,22 +113,48 @@ export class CollisionSystem {
   private handleBulletPlayerCollision(bullet: BulletEntity, player: PlayerEntity): void {
     const gameState = useGameStore.getState();
     
-    // Damage player
-    const newHealth = player.health - bullet.damage;
-    gameState.updatePlayerHealth(newHealth);
-    
-    // Create impact effect
-    this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400');
+    // Check shield first, then player health
+    if (player.shieldActive && player.shieldHealth > 0) {
+      // Shield absorbs the damage
+      const shieldDamage = Math.min(bullet.damage, player.shieldHealth);
+      const excessDamage = bullet.damage - shieldDamage;
+      
+      gameState.damageShield(shieldDamage);
+      
+      // Create shield impact effect
+      this.createImpactEffect(bullet.position.x, bullet.position.y, '#00ffff');
+      
+      // If there's excess damage, apply to player health
+      if (excessDamage > 0) {
+        const newHealth = player.health - excessDamage;
+        gameState.updatePlayerHealth(newHealth);
+        
+        // Create additional impact effect for health damage
+        this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400');
+        
+        // Check if player is destroyed
+        if (newHealth <= 0) {
+          this.handlePlayerDestroyed();
+        }
+      }
+    } else {
+      // No shield protection - damage player directly
+      const newHealth = player.health - bullet.damage;
+      gameState.updatePlayerHealth(newHealth);
+      
+      // Create impact effect
+      this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400');
+      
+      // Check if player is destroyed
+      if (newHealth <= 0) {
+        this.handlePlayerDestroyed();
+      }
+    }
     
     // Remove bullet
     bullet.active = false;
     gameState.removeBullet(bullet.id);
     releaseBulletToPool(bullet);
-    
-    // Check if player is destroyed
-    if (newHealth <= 0) {
-      this.handlePlayerDestroyed();
-    }
   }
 
   // Handle player colliding with enemy
@@ -139,26 +165,48 @@ export class CollisionSystem {
     const playerDamage = enemy.damage;
     const enemyDamage = 50; // Player collision damage to enemy
     
-    const newPlayerHealth = player.health - playerDamage;
-    gameState.updatePlayerHealth(newPlayerHealth);
+    // Check shield first for player damage
+    if (player.shieldActive && player.shieldHealth > 0) {
+      // Shield absorbs the damage
+      const shieldDamage = Math.min(playerDamage, player.shieldHealth);
+      const excessDamage = playerDamage - shieldDamage;
+      
+      gameState.damageShield(shieldDamage);
+      
+      // If there's excess damage, apply to player health
+      if (excessDamage > 0) {
+        const newPlayerHealth = player.health - excessDamage;
+        gameState.updatePlayerHealth(newPlayerHealth);
+        
+        // Check if player is destroyed
+        if (newPlayerHealth <= 0) {
+          this.handlePlayerDestroyed();
+        }
+      }
+    } else {
+      // No shield protection - damage player directly
+      const newPlayerHealth = player.health - playerDamage;
+      gameState.updatePlayerHealth(newPlayerHealth);
+      
+      // Check if player is destroyed
+      if (newPlayerHealth <= 0) {
+        this.handlePlayerDestroyed();
+      }
+    }
     
+    // Damage enemy
     enemy.health -= enemyDamage;
     
     // Create large impact effect
     this.createImpactEffect(
       (player.position.x + enemy.position.x) / 2,
       (player.position.y + enemy.position.y) / 2,
-      '#ffffff'
+      player.shieldActive && player.shieldHealth > 0 ? '#00ffff' : '#ffffff'
     );
     
     // Check if enemy is destroyed
     if (enemy.health <= 0) {
       this.destroyEnemy(enemy);
-    }
-    
-    // Check if player is destroyed
-    if (newPlayerHealth <= 0) {
-      this.handlePlayerDestroyed();
     }
   }
 
@@ -212,6 +260,7 @@ export class CollisionSystem {
       setTimeout(() => {
         if (gameState.player) {
           gameState.updatePlayerHealth(100);
+          gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
           gameState.updatePlayerPosition({
             x: gameState.config.width / 2,
             y: gameState.config.height - 100

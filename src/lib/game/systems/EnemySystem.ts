@@ -50,6 +50,7 @@ export class EnemySystem {
         enemy.velocity.y = 80 + (level * 10);
         enemy.health = 30;
         enemy.damage = 20;
+        enemy.shieldDamage = 8;
         enemy.size = { x: 24, y: 24 };
         break;
         
@@ -58,6 +59,7 @@ export class EnemySystem {
         enemy.velocity.y = 60 + (level * 8);
         enemy.health = 40;
         enemy.damage = 25;
+        enemy.shieldDamage = 12;
         enemy.size = { x: 28, y: 28 };
         break;
         
@@ -66,6 +68,7 @@ export class EnemySystem {
         enemy.velocity.y = 70 + (level * 5);
         enemy.health = 60;
         enemy.damage = 35;
+        enemy.shieldDamage = 15;
         enemy.size = { x: 32, y: 32 };
         break;
         
@@ -74,6 +77,7 @@ export class EnemySystem {
         enemy.velocity.y = 50 + (level * 5);
         enemy.health = 80;
         enemy.damage = 40;
+        enemy.shieldDamage = 18;
         enemy.size = { x: 36, y: 36 };
         break;
     }
