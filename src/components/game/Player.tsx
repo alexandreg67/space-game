@@ -24,12 +24,12 @@ export default function Player({ player }: PlayerProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Animation values calculated every frame (no useMemo needed since animationTime changes every frame)
-  const animationValues = {
+  // Animation values are memoized to avoid unnecessary recalculation of trigonometric functions
+  const animationValues = useMemo(() => ({
     thrusterOffset: Math.sin(animationTime * 0.01) * 2,
     coreGlow: Math.sin(animationTime * 0.008) * 0.3 + 0.7,
     weaponPulse: Math.sin(animationTime * 0.012) * 0.2 + 0.8
-  };
+  }), [animationTime]);
 
   // Simple calculation - no memoization overhead needed
   const healthPercent = player.health / player.maxHealth;
