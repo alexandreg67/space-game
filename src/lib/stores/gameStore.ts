@@ -213,9 +213,16 @@ export const useGameStore = create<GameStore>()(
 
       // Game state updates
       updateScore: (points: number) => {
-        set((state) => ({
-          score: state.score + points,
-        }));
+        set((state) => {
+          const newScore = state.score + points;
+          // Calculate new level based on score (level up every 1000 points)
+          const newLevel = Math.floor(newScore / 1000) + 1;
+          
+          return {
+            score: newScore,
+            level: newLevel,
+          };
+        });
       },
 
       updateLives: (lives: number) => {
