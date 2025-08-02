@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useMemo } from 'react';
-import { Text, Rect, Group } from 'react-konva';
-import { useGameStore } from '@/lib/stores/gameStore';
+import React, { useMemo } from "react";
+import { Text, Rect, Group } from "react-konva";
+import { useGameStore } from "@/lib/stores/gameStore";
 
 interface HUDProps {
   width: number;
@@ -11,16 +11,16 @@ interface HUDProps {
 
 export default function HUD({ width, height }: HUDProps) {
   // Use individual selectors to avoid unnecessary re-renders
-  const score = useGameStore(state => state.score);
-  const lives = useGameStore(state => state.lives);
-  const level = useGameStore(state => state.level);
-  
+  const score = useGameStore((state) => state.score);
+  const lives = useGameStore((state) => state.lives);
+  const level = useGameStore((state) => state.level);
+
   // Memoize the lives indicators array to prevent unnecessary re-renders
   const livesIndicators = useMemo(() => {
     return Array.from({ length: Math.max(0, lives) }, (_, i) => (
       <Rect
         key={i}
-        x={width / 2 + 20 + (i * 25)}
+        x={width / 2 + 20 + i * 25}
         y={22}
         width={20}
         height={15}
@@ -67,7 +67,7 @@ export default function HUD({ width, height }: HUDProps) {
           fill="#ffffff"
           fontStyle="bold"
         />
-        
+
         {/* Lives indicators */}
         {livesIndicators}
       </Group>
@@ -93,7 +93,7 @@ export default function HUD({ width, height }: HUDProps) {
           fontFamily="Arial"
           fill="#ffffff"
         />
-        
+
         {/* Health bar background */}
         <Rect
           x={80}

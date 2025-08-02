@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Rect, Group } from 'react-konva';
+import React from "react";
+import { Rect, Group } from "react-konva";
 
 interface BackgroundProps {
   width: number;
@@ -37,14 +37,8 @@ export default function Background({ width, height }: BackgroundProps) {
   return (
     <Group>
       {/* Space background - black with gradient */}
-      <Rect
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        fill="black"
-      />
-      
+      <Rect x={0} y={0} width={width} height={height} fill="black" />
+
       {/* Stars */}
       {STATIC_STARS.map((star, index) => (
         <Rect
@@ -57,7 +51,7 @@ export default function Background({ width, height }: BackgroundProps) {
           opacity={star.opacity}
         />
       ))}
-      
+
       {/* Optional nebula effect */}
       <Rect
         x={0}

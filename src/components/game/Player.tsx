@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Group, Rect, RegularPolygon } from 'react-konva';
-import type { PlayerEntity } from '@/types/game';
+import React, { useEffect, useState } from "react";
+import { Group, Rect, RegularPolygon } from "react-konva";
+import type { PlayerEntity } from "@/types/game";
 
 interface PlayerProps {
   player: PlayerEntity;
@@ -14,22 +14,19 @@ export default function Player({ player }: PlayerProps) {
 
   // Thruster effect animation using a controlled animation instead of gameTime
   const [animationTime, setAnimationTime] = useState(0);
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setAnimationTime(prev => prev + 16); // Update every ~16ms for smooth animation
+      setAnimationTime((prev) => prev + 16); // Update every ~16ms for smooth animation
     }, 16);
-    
+
     return () => clearInterval(interval);
   }, []);
-  
+
   const thrusterOffset = Math.sin(animationTime * 0.01) * 2;
 
   return (
-    <Group
-      x={player.position.x}
-      y={player.position.y}
-    >
+    <Group x={player.position.x} y={player.position.y}>
       {/* Main ship body */}
       <RegularPolygon
         x={0}
@@ -41,7 +38,7 @@ export default function Player({ player }: PlayerProps) {
         strokeWidth={1}
         rotation={-90} // Point upward
       />
-      
+
       {/* Ship core */}
       <Rect
         x={-4}
@@ -51,7 +48,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ffffff"
         cornerRadius={2}
       />
-      
+
       {/* Engine thrusters */}
       <Rect
         x={-8}
@@ -69,7 +66,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ff4400"
         cornerRadius={2}
       />
-      
+
       {/* Engine glow effect */}
       <Rect
         x={-8}
@@ -110,7 +107,13 @@ export default function Player({ player }: PlayerProps) {
             y={-25}
             width={30 * (player.health / player.maxHealth)}
             height={4}
-            fill={player.health > 60 ? "#00ff00" : player.health > 30 ? "#ffaa00" : "#ff0000"}
+            fill={
+              player.health > 60
+                ? "#00ff00"
+                : player.health > 30
+                ? "#ffaa00"
+                : "#ff0000"
+            }
             cornerRadius={2}
           />
         </Group>

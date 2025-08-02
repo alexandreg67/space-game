@@ -1,15 +1,15 @@
-import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
-import type { 
-  GameState, 
-  PlayerEntity, 
-  EnemyEntity, 
-  BulletEntity, 
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import type {
+  GameState,
+  PlayerEntity,
+  EnemyEntity,
+  BulletEntity,
   PowerupEntity,
   InputState,
   GameConfig,
-  Vector2D
-} from '@/types/game';
+  Vector2D,
+} from "@/types/game";
 
 interface GameStore extends GameState {
   // Entities
@@ -17,16 +17,16 @@ interface GameStore extends GameState {
   enemies: EnemyEntity[];
   bullets: BulletEntity[];
   powerups: PowerupEntity[];
-  
+
   // Input
   input: InputState;
-  
+
   // Game config
   config: GameConfig;
-  
+
   // Background scroll
   backgroundOffset: number;
-  
+
   // Actions
   initializeGame: () => void;
   startGame: () => void;
@@ -34,12 +34,12 @@ interface GameStore extends GameState {
   resumeGame: () => void;
   endGame: () => void;
   resetGame: () => void;
-  
+
   // Player actions
   createPlayer: () => void;
   updatePlayerPosition: (position: Vector2D) => void;
   updatePlayerHealth: (health: number) => void;
-  
+
   // Entity management
   addEnemy: (enemy: EnemyEntity) => void;
   removeEnemy: (id: string) => void;
@@ -47,21 +47,21 @@ interface GameStore extends GameState {
   removeBullet: (id: string) => void;
   addPowerup: (powerup: PowerupEntity) => void;
   removePowerup: (id: string) => void;
-  
+
   // Game state updates
   updateScore: (points: number) => void;
   updateLives: (lives: number) => void;
   updateLevel: (level: number) => void;
   updateGameTime: (deltaTime: number) => void;
   updateBackgroundOffset: (offset: number) => void;
-  
+
   // Input handling
   updateInput: (input: Partial<InputState>) => void;
   addKey: (key: string) => void;
   removeKey: (key: string) => void;
   updateMouse: (x: number, y: number, pressed: boolean) => void;
   updateTouch: (x: number, y: number, active: boolean) => void;
-  
+
   // Entity updates
   updateEntities: (deltaTime: number) => void;
   cleanupInactiveEntities: () => void;
@@ -75,13 +75,13 @@ const defaultConfig: GameConfig = {
   enemySpeed: 100,
   enemySpawnRate: 2000, // milliseconds
   maxBullets: 50,
-  maxEnemies: 20
+  maxEnemies: 20,
 };
 
 const defaultInputState: InputState = {
   keys: new Set(),
   mouse: { x: 0, y: 0, pressed: false },
-  touch: { x: 0, y: 0, active: false }
+  touch: { x: 0, y: 0, active: false },
 };
 
 export const useGameStore = create<GameStore>()(
@@ -100,40 +100,40 @@ export const useGameStore = create<GameStore>()(
           bullets: [],
           powerups: [],
           backgroundOffset: 0,
-          input: { ...defaultInputState, keys: new Set() }
+          input: { ...defaultInputState, keys: new Set() },
         });
         actions.createPlayer();
       },
-      
+
       startGame: () => {
         set({ isRunning: true, isPaused: false });
       },
-      
+
       pauseGame: () => {
         set({ isPaused: true });
       },
-      
+
       resumeGame: () => {
         set({ isPaused: false });
       },
-      
+
       endGame: () => {
         set({ isRunning: false, isPaused: false });
       },
-      
+
       resetGame: () => {
         actions.initializeGame();
       },
-      
+
       // Player management
       createPlayer: () => {
         const { config } = get();
         const player: PlayerEntity = {
-          id: 'player',
-          type: 'player',
-          position: { 
-            x: config.width / 2, 
-            y: config.height - 100 
+          id: "player",
+          type: "player",
+          position: {
+            x: config.width / 2,
+            y: config.height - 100,
           },
           velocity: { x: 0, y: 0 },
           size: { x: 40, y: 40 },
@@ -142,44 +142,48 @@ export const useGameStore = create<GameStore>()(
           health: 100,
           maxHealth: 100,
           shootCooldown: 0,
-          canShoot: true
+          canShoot: true,
         };
         set({ player });
       },
-      
+
       updatePlayerPosition: (position: Vector2D) => {
-        set(state => ({
-          player: state.player ? {
-            ...state.player,
-            position: { ...position }
-          } : null
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                position: { ...position },
+              }
+            : null,
         }));
       },
-      
+
       updatePlayerHealth: (health: number) => {
-        set(state => ({
-          player: state.player ? {
-            ...state.player,
-            health: Math.max(0, Math.min(health, state.player.maxHealth))
-          } : null
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                health: Math.max(0, Math.min(health, state.player.maxHealth)),
+              }
+            : null,
         }));
       },
-      
+
       // Entity management
       addEnemy: (enemy: EnemyEntity) => {
-        set(state => ({
-          enemies: [...state.enemies, enemy]
+        set((state) => ({
+          enemies: [...state.enemies, enemy],
         }));
       },
-      
+
       removeEnemy: (id: string) => {
-        set(state => ({
-          enemies: state.enemies.filter(enemy => enemy.id !== id)
+        set((state) => ({
+          enemies: state.enemies.filter((enemy) => enemy.id !== id),
         }));
       },
-      
+
       addBullet: (bullet: BulletEntity) => {
-        set(state => {
+        set((state) => {
           const bullets = [...state.bullets, bullet];
           // Limit bullet count to prevent memory issues
           if (bullets.length > state.config.maxBullets) {
@@ -188,140 +192,144 @@ export const useGameStore = create<GameStore>()(
           return { bullets };
         });
       },
-      
+
       removeBullet: (id: string) => {
-        set(state => ({
-          bullets: state.bullets.filter(bullet => bullet.id !== id)
+        set((state) => ({
+          bullets: state.bullets.filter((bullet) => bullet.id !== id),
         }));
       },
-      
+
       addPowerup: (powerup: PowerupEntity) => {
-        set(state => ({
-          powerups: [...state.powerups, powerup]
+        set((state) => ({
+          powerups: [...state.powerups, powerup],
         }));
       },
-      
+
       removePowerup: (id: string) => {
-        set(state => ({
-          powerups: state.powerups.filter(powerup => powerup.id !== id)
+        set((state) => ({
+          powerups: state.powerups.filter((powerup) => powerup.id !== id),
         }));
       },
-      
+
       // Game state updates
       updateScore: (points: number) => {
-        set(state => ({
-          score: state.score + points
+        set((state) => ({
+          score: state.score + points,
         }));
       },
-      
+
       updateLives: (lives: number) => {
         set({ lives: Math.max(0, lives) });
       },
-      
+
       updateLevel: (level: number) => {
         set({ level });
       },
-      
+
       updateGameTime: (deltaTime: number) => {
-        set(state => ({
-          gameTime: state.gameTime + deltaTime
+        set((state) => ({
+          gameTime: state.gameTime + deltaTime,
         }));
       },
-      
+
       updateBackgroundOffset: (offset: number) => {
         set({ backgroundOffset: offset });
       },
-      
+
       // Input handling
       updateInput: (input: Partial<InputState>) => {
-        set(state => ({
-          input: { ...state.input, ...input }
+        set((state) => ({
+          input: { ...state.input, ...input },
         }));
       },
-      
+
       addKey: (key: string) => {
-        set(state => {
+        set((state) => {
           const newKeys = new Set(state.input.keys);
           newKeys.add(key);
           return {
-            input: { ...state.input, keys: newKeys }
+            input: { ...state.input, keys: newKeys },
           };
         });
       },
-      
+
       removeKey: (key: string) => {
-        set(state => {
+        set((state) => {
           const newKeys = new Set(state.input.keys);
           newKeys.delete(key);
           return {
-            input: { ...state.input, keys: newKeys }
+            input: { ...state.input, keys: newKeys },
           };
         });
       },
-      
+
       updateMouse: (x: number, y: number, pressed: boolean) => {
-        set(state => ({
+        set((state) => ({
           input: {
             ...state.input,
-            mouse: { x, y, pressed }
-          }
+            mouse: { x, y, pressed },
+          },
         }));
       },
-      
+
       updateTouch: (x: number, y: number, active: boolean) => {
-        set(state => ({
+        set((state) => ({
           input: {
             ...state.input,
-            touch: { x, y, active }
-          }
+            touch: { x, y, active },
+          },
         }));
       },
-      
+
       // Entity updates
       updateEntities: (deltaTime: number) => {
-        set(state => {
+        set((state) => {
           const { config } = state;
-          
+
           // Update bullets
-          const updatedBullets = state.bullets.map(bullet => ({
-            ...bullet,
-            position: {
-              x: bullet.position.x + bullet.velocity.x * deltaTime / 1000,
-              y: bullet.position.y + bullet.velocity.y * deltaTime / 1000
-            },
-            lifespan: bullet.lifespan - deltaTime
-          })).filter(bullet => 
-            bullet.lifespan > 0 && 
-            bullet.position.y > -50 && 
-            bullet.position.y < config.height + 50
-          );
-          
+          const updatedBullets = state.bullets
+            .map((bullet) => ({
+              ...bullet,
+              position: {
+                x: bullet.position.x + (bullet.velocity.x * deltaTime) / 1000,
+                y: bullet.position.y + (bullet.velocity.y * deltaTime) / 1000,
+              },
+              lifespan: bullet.lifespan - deltaTime,
+            }))
+            .filter(
+              (bullet) =>
+                bullet.lifespan > 0 &&
+                bullet.position.y > -50 &&
+                bullet.position.y < config.height + 50
+            );
+
           // Update enemies
-          const updatedEnemies = state.enemies.map(enemy => ({
-            ...enemy,
-            position: {
-              x: enemy.position.x + enemy.velocity.x * deltaTime / 1000,
-              y: enemy.position.y + enemy.velocity.y * deltaTime / 1000
-            }
-          })).filter(enemy => 
-            enemy.position.y < config.height + 100 && 
-            enemy.active
-          );
-          
+          const updatedEnemies = state.enemies
+            .map((enemy) => ({
+              ...enemy,
+              position: {
+                x: enemy.position.x + (enemy.velocity.x * deltaTime) / 1000,
+                y: enemy.position.y + (enemy.velocity.y * deltaTime) / 1000,
+              },
+            }))
+            .filter(
+              (enemy) => enemy.position.y < config.height + 100 && enemy.active
+            );
+
           return {
             bullets: updatedBullets,
-            enemies: updatedEnemies
+            enemies: updatedEnemies,
           };
         });
       },
-      
+
       cleanupInactiveEntities: () => {
-        set(state => ({
-          enemies: state.enemies.filter(enemy => enemy.active),
-          bullets: state.bullets.filter(bullet => bullet.active),
-          powerups: state.powerups.filter(powerup => powerup.active)
+        set((state) => ({
+          enemies: state.enemies.filter((enemy) => enemy.active),
+          bullets: state.bullets.filter((bullet) => bullet.active),
+          powerups: state.powerups.filter((powerup) => powerup.active),
         }));
-      }
+      },
     };
 
     return {
@@ -332,61 +340,62 @@ export const useGameStore = create<GameStore>()(
       lives: 3,
       level: 1,
       gameTime: 0,
-      
+
       player: null,
       enemies: [],
       bullets: [],
       powerups: [],
-      
+
       input: defaultInputState,
       config: defaultConfig,
       backgroundOffset: 0,
-      
+
       // Return stable action references
-      ...actions
+      ...actions,
     };
   })
 );
 
 // Selector hooks for performance optimization with stable references
-export const usePlayer = () => useGameStore(state => state.player);
-export const useEnemies = () => useGameStore(state => state.enemies);
-export const useBullets = () => useGameStore(state => state.bullets);
+export const usePlayer = () => useGameStore((state) => state.player);
+export const useEnemies = () => useGameStore((state) => state.enemies);
+export const useBullets = () => useGameStore((state) => state.bullets);
 export const useGameState = () => {
-  const isRunning = useGameStore(state => state.isRunning);
-  const isPaused = useGameStore(state => state.isPaused);
-  const score = useGameStore(state => state.score);
-  const lives = useGameStore(state => state.lives);
-  const level = useGameStore(state => state.level);
-  
+  const isRunning = useGameStore((state) => state.isRunning);
+  const isPaused = useGameStore((state) => state.isPaused);
+  const score = useGameStore((state) => state.score);
+  const lives = useGameStore((state) => state.lives);
+  const level = useGameStore((state) => state.level);
+
   return { isRunning, isPaused, score, lives, level };
 };
-export const useInput = () => useGameStore(state => state.input);
-export const useGameTime = () => useGameStore(state => state.gameTime);
+export const useInput = () => useGameStore((state) => state.input);
+export const useGameTime = () => useGameStore((state) => state.gameTime);
 
 // Stable action selectors to prevent re-renders
-export const useGameActions = () => useGameStore(state => ({
-  initializeGame: state.initializeGame,
-  startGame: state.startGame,
-  pauseGame: state.pauseGame,
-  resumeGame: state.resumeGame,
-  endGame: state.endGame,
-  resetGame: state.resetGame,
-  updatePlayerPosition: state.updatePlayerPosition,
-  updatePlayerHealth: state.updatePlayerHealth,
-  addEnemy: state.addEnemy,
-  removeEnemy: state.removeEnemy,
-  addBullet: state.addBullet,
-  removeBullet: state.removeBullet,
-  updateScore: state.updateScore,
-  updateLives: state.updateLives,
-  updateLevel: state.updateLevel,
-  updateGameTime: state.updateGameTime,
-  updateBackgroundOffset: state.updateBackgroundOffset,
-  updateEntities: state.updateEntities,
-  cleanupInactiveEntities: state.cleanupInactiveEntities,
-  addKey: state.addKey,
-  removeKey: state.removeKey,
-  updateMouse: state.updateMouse,
-  updateTouch: state.updateTouch
-}));
+export const useGameActions = () =>
+  useGameStore((state) => ({
+    initializeGame: state.initializeGame,
+    startGame: state.startGame,
+    pauseGame: state.pauseGame,
+    resumeGame: state.resumeGame,
+    endGame: state.endGame,
+    resetGame: state.resetGame,
+    updatePlayerPosition: state.updatePlayerPosition,
+    updatePlayerHealth: state.updatePlayerHealth,
+    addEnemy: state.addEnemy,
+    removeEnemy: state.removeEnemy,
+    addBullet: state.addBullet,
+    removeBullet: state.removeBullet,
+    updateScore: state.updateScore,
+    updateLives: state.updateLives,
+    updateLevel: state.updateLevel,
+    updateGameTime: state.updateGameTime,
+    updateBackgroundOffset: state.updateBackgroundOffset,
+    updateEntities: state.updateEntities,
+    cleanupInactiveEntities: state.cleanupInactiveEntities,
+    addKey: state.addKey,
+    removeKey: state.removeKey,
+    updateMouse: state.updateMouse,
+    updateTouch: state.updateTouch,
+  }));
