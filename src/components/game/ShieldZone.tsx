@@ -30,7 +30,7 @@ export default function ShieldZone({ width, height, shieldHeight }: ShieldZonePr
   const shieldColor = getShieldColor();
   const shieldOpacity = shieldActive ? 0.6 + (shieldPercentage * 0.4) : 0.2;
 
-  // Simple warning flash based on percentage
+  // Static warning opacity when shield is low
   const isLowShield = shieldPercentage < 0.25 && shieldPercentage > 0;
   const warningOpacity = isLowShield ? 0.3 : 0.1;
 

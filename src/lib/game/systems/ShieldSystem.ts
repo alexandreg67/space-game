@@ -151,5 +151,6 @@ export class ShieldSystem {
   }
 }
 
-// Singleton instance
-export const shieldSystem = new ShieldSystem(800, 600);
+// Singleton instance with dynamic dimensions from game config
+const { width, height } = useGameStore.getState().config;
+export const shieldSystem = new ShieldSystem(width, height);

@@ -260,7 +260,7 @@ export class CollisionSystem {
       setTimeout(() => {
         if (gameState.player) {
           gameState.updatePlayerHealth(100);
-          gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
+          this.resetPlayerShield();
           gameState.updatePlayerPosition({
             x: gameState.config.width / 2,
             y: gameState.config.height - 100
@@ -268,6 +268,12 @@ export class CollisionSystem {
         }
       }, 2000);
     }
+  }
+
+  // Reset player shield to full health
+  private resetPlayerShield(): void {
+    const gameState = useGameStore.getState();
+    gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
   }
 
   // Create impact particle effect
