@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { Group, Rect, Shape, Circle } from "react-konva";
 import Konva from "konva";
 import type { PlayerEntity } from "@/types/game";
@@ -34,11 +34,8 @@ export default function Player({ player }: PlayerProps) {
   // Simple calculation - no memoization overhead needed
   const healthPercent = player.health / player.maxHealth;
 
-  // Only memoize when the calculation depends on other computed values
-  const coreRadius = useMemo(() => 
-    2 + animationValues.coreGlow * 2, 
-    [animationValues.coreGlow]
-  );
+  // Simple calculation that changes every frame - no memoization needed
+  const coreRadius = 2 + animationValues.coreGlow * 2;
 
   // Modern angular hull shape with Konva's enhanced context
   const hullPath = (context: any, shape: Konva.Shape) => {
