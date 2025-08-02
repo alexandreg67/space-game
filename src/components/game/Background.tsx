@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Rect, Group } from 'react-konva';
-import { useGameStore } from '@/lib/stores/gameStore';
 
 interface BackgroundProps {
   width: number;
@@ -16,22 +15,24 @@ interface Star {
   opacity: number;
 }
 
-export default function Background({ width, height }: BackgroundProps) {
-  const { backgroundOffset } = useGameStore();
+// Generate static stars to avoid re-renders
+const generateStars = (count: number): Star[] => {
+  const starArray: Star[] = [];
+  for (let i = 0; i < count; i++) {
+    starArray.push({
+      x: Math.random() * 800, // Fixed width
+      y: Math.random() * 600, // Fixed height
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.8 + 0.2,
+    });
+  }
+  return starArray;
+};
 
-  // Generate stars once and memoize them for performance
-  const stars = useMemo((): Star[] => {
-    const starArray: Star[] = [];
-    for (let i = 0; i < 200; i++) {
-      starArray.push({
-        x: Math.random() * width,
-        y: Math.random() * height * 2, // Double height for scrolling
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.8 + 0.2,
-      });
-    }
-    return starArray;
-  }, [width, height]);
+const STATIC_STARS = generateStars(200);
+
+export default function Background({ width, height }: BackgroundProps) {
+  // Static background for now to avoid re-renders
 
   return (
     <Group>
@@ -45,11 +46,11 @@ export default function Background({ width, height }: BackgroundProps) {
       />
       
       {/* Stars */}
-      {stars.map((star, index) => (
+      {STATIC_STARS.map((star, index) => (
         <Rect
           key={`star-${index}`}
           x={star.x}
-          y={(star.y - backgroundOffset) % (height * 2) - height}
+          y={star.y}
           width={star.size}
           height={star.size}
           fill="white"

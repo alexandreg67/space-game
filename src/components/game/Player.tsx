@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Group, Rect, RegularPolygon } from 'react-konva';
-import { useGameTime } from '@/lib/stores/gameStore';
 import type { PlayerEntity } from '@/types/game';
 
 interface PlayerProps {
@@ -13,9 +12,18 @@ export default function Player({ player }: PlayerProps) {
   // Player movement and shooting are now handled by the main game loop
   // This component only renders the player visual representation
 
-  // Thruster effect animation using gameTime instead of Date.now()
-  const gameTime = useGameTime();
-  const thrusterOffset = Math.sin(gameTime * 0.01) * 2;
+  // Thruster effect animation using a controlled animation instead of gameTime
+  const [animationTime, setAnimationTime] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAnimationTime(prev => prev + 16); // Update every ~16ms for smooth animation
+    }, 16);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  const thrusterOffset = Math.sin(animationTime * 0.01) * 2;
 
   return (
     <Group

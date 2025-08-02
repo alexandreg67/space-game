@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, Rect, Group } from 'react-konva';
-import { useGameState } from '@/lib/stores/gameStore';
+import { useGameStore } from '@/lib/stores/gameStore';
 
 interface HUDProps {
   width: number;
@@ -10,7 +10,27 @@ interface HUDProps {
 }
 
 export default function HUD({ width, height }: HUDProps) {
-  const { score, lives, level } = useGameState();
+  // Use individual selectors to avoid unnecessary re-renders
+  const score = useGameStore(state => state.score);
+  const lives = useGameStore(state => state.lives);
+  const level = useGameStore(state => state.level);
+  
+  // Memoize the lives indicators array to prevent unnecessary re-renders
+  const livesIndicators = useMemo(() => {
+    return Array.from({ length: Math.max(0, lives) }, (_, i) => (
+      <Rect
+        key={i}
+        x={width / 2 + 20 + (i * 25)}
+        y={22}
+        width={20}
+        height={15}
+        fill="#00ff00"
+        stroke="#ffffff"
+        strokeWidth={1}
+        cornerRadius={2}
+      />
+    ));
+  }, [lives, width]);
 
   return (
     <Group>
@@ -49,19 +69,7 @@ export default function HUD({ width, height }: HUDProps) {
         />
         
         {/* Lives indicators */}
-        {Array.from({ length: Math.max(0, lives) }, (_, i) => (
-          <Rect
-            key={i}
-            x={width / 2 + 20 + (i * 25)}
-            y={22}
-            width={20}
-            height={15}
-            fill="#00ff00"
-            stroke="#ffffff"
-            strokeWidth={1}
-            cornerRadius={2}
-          />
-        ))}
+        {livesIndicators}
       </Group>
 
       {/* Level */}

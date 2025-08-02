@@ -34,71 +34,63 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
     enemies,
     bullets,
     input,
-    level,
-    startGame,
-    initializeGame,
-    updateEntities,
-    updateGameTime,
-    addKey,
-    removeKey,
-    updateMouse,
-    updateTouch
+    level
   } = useGameStore();
-
+  
   // Initialize game when component mounts (stable reference to avoid re-renders)
   useEffect(() => {
     initializePools();
-    initializeGame();
-  }, [initializeGame]); // Include initializeGame dependency
+    useGameStore.getState().initializeGame();
+  }, []); // Empty dependency array to run only once
 
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     e.preventDefault();
-    addKey(e.code);
-  }, [addKey]);
+    useGameStore.getState().addKey(e.code);
+  }, []);
 
   const handleKeyUp = useCallback((e: KeyboardEvent) => {
     e.preventDefault();
-    removeKey(e.code);
-  }, [removeKey]);
+    useGameStore.getState().removeKey(e.code);
+  }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    updateMouse(e.clientX - rect.left, e.clientY - rect.top, input.mouse.pressed);
-  }, [updateMouse, input.mouse.pressed]);
+    useGameStore.getState().updateMouse(e.clientX - rect.left, e.clientY - rect.top, input.mouse.pressed);
+  }, [input.mouse.pressed]);
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    updateMouse(e.clientX - rect.left, e.clientY - rect.top, true);
-  }, [updateMouse]);
+    useGameStore.getState().updateMouse(e.clientX - rect.left, e.clientY - rect.top, true);
+  }, []);
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    updateMouse(e.clientX - rect.left, e.clientY - rect.top, false);
-  }, [updateMouse]);
+    useGameStore.getState().updateMouse(e.clientX - rect.left, e.clientY - rect.top, false);
+  }, []);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
     e.preventDefault();
     if (e.touches.length > 0) {
       const touch = e.touches[0];
       const rect = (e.target as HTMLElement).getBoundingClientRect();
-      updateTouch(touch.clientX - rect.left, touch.clientY - rect.top, true);
+      useGameStore.getState().updateTouch(touch.clientX - rect.left, touch.clientY - rect.top, true);
     }
-  }, [updateTouch]);
+  }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     e.preventDefault();
     if (e.touches.length > 0) {
       const touch = e.touches[0];
       const rect = (e.target as HTMLElement).getBoundingClientRect();
-      updateTouch(touch.clientX - rect.left, touch.clientY - rect.top, true);
+      useGameStore.getState().updateTouch(touch.clientX - rect.left, touch.clientY - rect.top, true);
     }
-  }, [updateTouch]);
+  }, []);
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
     e.preventDefault();
-    updateTouch(0, 0, false);
-  }, [updateTouch]);
+    useGameStore.getState().updateTouch(0, 0, false);
+  }, []);
 
   // Set up event listeners
   useEffect(() => {
@@ -144,9 +136,9 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
   // Handle starting the game
   const handleStartGame = useCallback(() => {
     if (!isRunning) {
-      startGame();
+      useGameStore.getState().startGame();
     }
-  }, [isRunning, startGame]);
+  }, [isRunning]);
 
   // Listen for space key to start game
   useEffect(() => {
@@ -200,7 +192,8 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
   const updatePlayer = useCallback((deltaTime: number) => {
     if (!player || !isRunning || isPaused) return;
 
-    const gameState = useGameStore.getState();
+    const updatePlayerPosition = useGameStore.getState().updatePlayerPosition;
+    const addBullet = useGameStore.getState().addBullet;
     let movement = Vector2.create(0, 0);
 
     // Keyboard movement
@@ -253,7 +246,7 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
       newPosition.x = MathUtils.clamp(newPosition.x, halfWidth, width - halfWidth);
       newPosition.y = MathUtils.clamp(newPosition.y, halfHeight, height - halfHeight);
 
-      gameState.updatePlayerPosition(newPosition);
+      updatePlayerPosition(newPosition);
     }
 
     // Handle shooting
@@ -262,7 +255,7 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
     
     if ((input.keys.has('Space') || input.mouse.pressed || input.touch.active) && canShoot) {
       const bullet = createPlayerBullet(player.position.x, player.position.y - player.size.y / 2);
-      gameState.addBullet(bullet);
+      addBullet(bullet);
       lastShotTimeRef.current = currentTime;
     }
   }, [player, isRunning, isPaused, input, width, height, createPlayerBullet]);
@@ -278,14 +271,8 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
     lastTimeRef.current = currentTime;
 
     // Update game state
-    updateGameTime(deltaTime);
-    updateEntities(deltaTime);
-
-    // Update background scrolling
-    const gameState = useGameStore.getState();
-    const scrollSpeed = 50; // pixels per second
-    const newOffset = (gameState.backgroundOffset + (scrollSpeed * deltaTime / 1000)) % height;
-    gameState.updateBackgroundOffset(newOffset);
+    useGameStore.getState().updateGameTime(deltaTime);
+    useGameStore.getState().updateEntities(deltaTime);
 
     // Update player controls and movement
     updatePlayer(deltaTime);
@@ -307,7 +294,7 @@ export default function GameCanvas({ width = 800, height = 600 }: GameCanvasProp
 
     // Continue the loop
     animationRef.current = requestAnimationFrame(gameLoop);
-  }, [isRunning, isPaused, updateGameTime, updateEntities, updatePlayer, level, enemies, player, height]);
+  }, [isRunning, isPaused, updatePlayer, level, enemies, player]);
 
   // Start game loop
   useEffect(() => {
