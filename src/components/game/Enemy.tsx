@@ -34,7 +34,7 @@ export default function Enemy({ enemy }: EnemyProps) {
               radius={baseSize + 3}
               fill="#ff4444"
               opacity={0.3}
-              rotation={90}
+              rotation={180}
               shadowColor="#ff4444"
               shadowBlur={8}
               shadowOpacity={0.6}
@@ -43,33 +43,32 @@ export default function Enemy({ enemy }: EnemyProps) {
             <Shape
               sceneFunc={(context, shape) => {
                 context.beginPath();
-                context.moveTo(0, -baseSize);
-                context.lineTo(-baseSize * 0.8, baseSize);
-                context.lineTo(-baseSize * 0.3, baseSize * 0.6);
-                context.lineTo(0, baseSize * 0.8);
-                context.lineTo(baseSize * 0.3, baseSize * 0.6);
-                context.lineTo(baseSize * 0.8, baseSize);
+                context.moveTo(0, baseSize);
+                context.lineTo(-baseSize * 0.8, -baseSize);
+                context.lineTo(-baseSize * 0.3, -baseSize * 0.6);
+                context.lineTo(0, -baseSize * 0.8);
+                context.lineTo(baseSize * 0.3, -baseSize * 0.6);
+                context.lineTo(baseSize * 0.8, -baseSize);
                 context.closePath();
                 context.fillStrokeShape(shape);
               }}
               fill="#cc2222"
               stroke="#ff6666"
               strokeWidth={2}
-              rotation={90}
             />
             {/* Weapon systems */}
             <Circle
               x={0}
-              y={4}
+              y={-4}
               radius={3}
               fill="#ffaa00"
               opacity={pulse}
             />
             {/* Engine trails */}
-            <Group rotation={90}>
+            <Group>
               <Rect
                 x={-1}
-                y={baseSize - 2}
+                y={-baseSize + 2}
                 width={2}
                 height={6}
                 fill="#ff8844"
