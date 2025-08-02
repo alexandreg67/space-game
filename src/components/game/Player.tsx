@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Group, Rect, Shape, Circle } from "react-konva";
 import Konva from "konva";
 import type { PlayerEntity } from "@/types/game";
+
+// Constants for visual elements
+const SHIELD_RADIUS = 25;
+const CORE_BASE_RADIUS = 2;
+const CORE_GLOW_MULTIPLIER = 2;
 
 interface PlayerProps {
   player: PlayerEntity;
@@ -34,8 +39,8 @@ export default function Player({ player }: PlayerProps) {
   // Simple calculation - no memoization overhead needed
   const healthPercent = player.health / player.maxHealth;
 
-  // Simple calculation that changes every frame - no memoization needed
-  const coreRadius = 2 + animationValues.coreGlow * 2;
+  // Calculated radius based on animated glow effect
+  const coreRadius = CORE_BASE_RADIUS + animationValues.coreGlow * CORE_GLOW_MULTIPLIER;
 
   // Modern angular hull shape with Konva's enhanced context
   const hullPath = (context: any, shape: Konva.Shape) => {
@@ -213,7 +218,7 @@ export default function Player({ player }: PlayerProps) {
           <Circle
             x={0}
             y={0}
-            radius={25}
+            radius={SHIELD_RADIUS}
             stroke="rgba(0, 255, 255, 0.4)"
             strokeWidth={2}
             dash={[3, 3]}
