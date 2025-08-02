@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { Group, Rect, Shape, Circle } from "react-konva";
+import Konva from "konva";
 import type { PlayerEntity } from "@/types/game";
 
 interface PlayerProps {
@@ -23,25 +24,24 @@ export default function Player({ player }: PlayerProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Memoized calculations for better performance
-  const animationValues = useMemo(() => ({
+  // Animation values calculated every frame (no useMemo needed since animationTime changes every frame)
+  const animationValues = {
     thrusterOffset: Math.sin(animationTime * 0.01) * 2,
     coreGlow: Math.sin(animationTime * 0.008) * 0.3 + 0.7,
     weaponPulse: Math.sin(animationTime * 0.012) * 0.2 + 0.8
-  }), [animationTime]);
+  };
 
-  const healthPercent = useMemo(() => 
-    player.health / player.maxHealth, 
-    [player.health, player.maxHealth]
-  );
+  // Simple calculation - no memoization overhead needed
+  const healthPercent = player.health / player.maxHealth;
 
+  // Only memoize when the calculation depends on other computed values
   const coreRadius = useMemo(() => 
     2 + animationValues.coreGlow * 2, 
     [animationValues.coreGlow]
   );
 
-  // Modern angular hull shape (context is Konva's canvas context, not standard Canvas2D)
-  const hullPath = (context: any, shape: any) => {
+  // Modern angular hull shape with Konva's enhanced context
+  const hullPath = (context: any, shape: Konva.Shape) => {
     context.beginPath();
     // Main hull outline - sleek angular design
     context.moveTo(0, -18); // Top point
