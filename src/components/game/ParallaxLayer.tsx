@@ -186,10 +186,21 @@ const ParallaxLayer = React.memo(function ParallaxLayer({
         const repeatedX = x < -star.size ? x + extendedWidth : x;
         const repeatedX2 = x > width ? x - extendedWidth : undefined;
         
-        // Optimized twinkling effect using animation frame time
-        const twinkleTime = (twinklePhaseRef.current + index * 100) * 0.001;
-        const twinkleOffset = Math.sin(twinkleTime * (star.twinkle || 1)) * 0.2;
-        const currentOpacity = Math.max(0.1, (star.opacity || 1) + twinkleOffset);
+        // Subtle twinkling effect based on layer type
+        let currentOpacity = star.opacity || 1;
+        
+        // Only add twinkling for near stars, very subtle for others
+        if (layerType === 'near' && star.size > 1.5) {
+          const twinkleTime = (twinklePhaseRef.current + index * 200) * 0.0005;
+          const twinkleOffset = Math.sin(twinkleTime * (star.twinkle || 1)) * 0.05; // Much more subtle
+          currentOpacity = Math.max(0.1, currentOpacity + twinkleOffset);
+        } else if (layerType === 'mid' && star.size > 2) {
+          // Very subtle twinkling for medium stars
+          const twinkleTime = (twinklePhaseRef.current + index * 300) * 0.0003;
+          const twinkleOffset = Math.sin(twinkleTime * (star.twinkle || 1)) * 0.02;
+          currentOpacity = Math.max(0.1, currentOpacity + twinkleOffset);
+        }
+        // Deep stars don't twinkle at all for a more realistic space effect
         
         return (
           <React.Fragment key={`star-${index}`}>

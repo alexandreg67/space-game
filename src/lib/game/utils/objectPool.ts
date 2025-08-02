@@ -265,7 +265,9 @@ let poolsInitialized = false;
 // Initialize default pools
 export function initializePools(): void {
   if (poolsInitialized) {
-    console.warn('Object pools already initialized');
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Object pools already initialized - skipping re-initialization');
+    }
     return;
   }
   
@@ -275,7 +277,9 @@ export function initializePools(): void {
   poolManager.registerPool('particles', createParticlePool());
   
   poolsInitialized = true;
-  console.log('Object pools initialized successfully');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Object pools initialized successfully');
+  }
 }
 
 // Check if pools are initialized
