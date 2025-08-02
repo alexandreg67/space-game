@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import Konva from "konva";
 import { useGameStore } from "@/lib/stores/gameStore";
@@ -12,7 +12,8 @@ import { getBulletFromPool } from "@/lib/game/utils/objectPool";
 import Player from "./Player";
 import Enemy from "./Enemy";
 import Bullet from "./Bullet";
-import Background from "./Background";
+import EnhancedBackground from "./EnhancedBackground";
+import SpaceDustLayer from "./SpaceDustLayer";
 import HUD from "./UI/HUD";
 
 interface GameCanvasProps {
@@ -30,12 +31,16 @@ export default function GameCanvas({
   const lastShotTimeRef = useRef<number>(0);
   const shootCooldown = 150; // milliseconds between shots
 
-  const { isRunning, isPaused, player, enemies, bullets, input, level } =
+  const { isRunning, isPaused, player, enemies, bullets, input, level, backgroundOffset } =
     useGameStore();
+  
+  // Track pool initialization state to prevent timing issues
+  const [poolsInitialized, setPoolsInitialized] = useState(false);
 
   // Initialize game when component mounts (stable reference to avoid re-renders)
   useEffect(() => {
     initializePools();
+    setPoolsInitialized(true);
     useGameStore.getState().initializeGame();
   }, []); // Empty dependency array to run only once
 
@@ -174,7 +179,7 @@ export default function GameCanvas({
 
   // Player control functions
   const generateBulletId = useCallback(() => {
-    return `bullet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `bullet-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }, []);
 
   const createPlayerBullet = useCallback(
@@ -316,6 +321,11 @@ export default function GameCanvas({
       useGameStore.getState().updateGameTime(deltaTime);
       useGameStore.getState().updateEntities(deltaTime);
 
+      // Update background scrolling
+      const scrollSpeed = 50; // pixels per second
+      const newBackgroundOffset = backgroundOffset + (scrollSpeed * deltaTime) / 1000;
+      useGameStore.getState().updateBackgroundOffset(newBackgroundOffset);
+
       // Update player controls and movement
       updatePlayer(deltaTime);
 
@@ -337,7 +347,7 @@ export default function GameCanvas({
       // Continue the loop
       animationRef.current = requestAnimationFrame(gameLoop);
     },
-    [isRunning, isPaused, updatePlayer, level, enemies, player]
+    [isRunning, isPaused, updatePlayer, level, enemies, player, backgroundOffset]
   );
 
   // Start game loop
@@ -367,10 +377,28 @@ export default function GameCanvas({
         height={height}
         style={{ display: "block" }}
       >
-        {/* Background Layer */}
-        <Layer>
-          <Background width={width} height={height} />
+        {/* Background Layers */}
+        <Layer name="background" listening={false}>
+          <EnhancedBackground 
+            width={width} 
+            height={height} 
+            offset={backgroundOffset}
+            enableEnhanced={true}
+          />
         </Layer>
+        
+        {/* Foreground Effects Layer - Only render after pools are initialized */}
+        {poolsInitialized && (
+          <Layer name="foreground-effects" listening={false}>
+            <SpaceDustLayer 
+              width={width} 
+              height={height} 
+              offset={backgroundOffset}
+              particleCount={80}
+              speed={1.5}
+            />
+          </Layer>
+        )}
 
         {/* Entities Layer */}
         <Layer>

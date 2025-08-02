@@ -191,21 +191,24 @@ export interface Particle {
   decay: number;
 }
 
+// Fallback particle creation function
+export const createParticle = (): Particle => ({
+  x: 0,
+  y: 0,
+  vx: 0,
+  vy: 0,
+  life: 1000,
+  maxLife: 1000,
+  color: '#ffffff',
+  size: 2,
+  alpha: 1,
+  decay: 0.02
+});
+
 export const createParticlePool = () => {
   return new ObjectPool<Particle>(
     // Create function
-    () => ({
-      x: 0,
-      y: 0,
-      vx: 0,
-      vy: 0,
-      life: 1000,
-      maxLife: 1000,
-      color: '#ffffff',
-      size: 2,
-      alpha: 1,
-      decay: 0.02
-    }),
+    createParticle,
     // Reset function
     (particle) => {
       particle.x = 0;
@@ -256,12 +259,28 @@ export class PoolManager {
 // Global pool manager instance
 export const poolManager = new PoolManager();
 
+// Track initialization state
+let poolsInitialized = false;
+
 // Initialize default pools
 export function initializePools(): void {
+  if (poolsInitialized) {
+    console.warn('Object pools already initialized');
+    return;
+  }
+  
   poolManager.registerPool('bullets', createBulletPool());
   poolManager.registerPool('enemies', createEnemyPool());
   poolManager.registerPool('powerups', createPowerupPool());
   poolManager.registerPool('particles', createParticlePool());
+  
+  poolsInitialized = true;
+  console.log('Object pools initialized successfully');
+}
+
+// Check if pools are initialized
+export function arePoolsInitialized(): boolean {
+  return poolsInitialized;
 }
 
 // Convenience functions
@@ -300,7 +319,10 @@ export function releasePowerupToPool(powerup: PowerupEntity): void {
 
 export function getParticleFromPool(): Particle {
   const pool = poolManager.getPool<Particle>('particles');
-  if (!pool) throw new Error('Particle pool not initialized');
+  if (!pool) {
+    console.warn('Particle pool not initialized, creating fallback particle');
+    return createParticle();
+  }
   return pool.get();
 }
 
