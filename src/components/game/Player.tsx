@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Group, Rect, Shape, Circle } from "react-konva";
 import type { PlayerEntity } from "@/types/game";
 
@@ -23,11 +23,24 @@ export default function Player({ player }: PlayerProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const thrusterOffset = Math.sin(animationTime * 0.01) * 2;
-  const coreGlow = Math.sin(animationTime * 0.008) * 0.3 + 0.7;
-  const weaponPulse = Math.sin(animationTime * 0.012) * 0.2 + 0.8;
+  // Memoized calculations for better performance
+  const animationValues = useMemo(() => ({
+    thrusterOffset: Math.sin(animationTime * 0.01) * 2,
+    coreGlow: Math.sin(animationTime * 0.008) * 0.3 + 0.7,
+    weaponPulse: Math.sin(animationTime * 0.012) * 0.2 + 0.8
+  }), [animationTime]);
 
-  // Modern angular hull shape
+  const healthPercent = useMemo(() => 
+    player.health / player.maxHealth, 
+    [player.health, player.maxHealth]
+  );
+
+  const coreRadius = useMemo(() => 
+    2 + animationValues.coreGlow * 2, 
+    [animationValues.coreGlow]
+  );
+
+  // Modern angular hull shape (context is Konva's canvas context, not standard Canvas2D)
   const hullPath = (context: any, shape: any) => {
     context.beginPath();
     // Main hull outline - sleek angular design
@@ -107,7 +120,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ff6b35"
         stroke="#ff9500"
         strokeWidth={1}
-        opacity={weaponPulse}
+        opacity={animationValues.weaponPulse}
         cornerRadius={1}
       />
       <Rect
@@ -118,7 +131,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ff6b35"
         stroke="#ff9500"
         strokeWidth={1}
-        opacity={weaponPulse}
+        opacity={animationValues.weaponPulse}
         cornerRadius={1}
       />
 
@@ -127,7 +140,7 @@ export default function Player({ player }: PlayerProps) {
         x={-5}
         y={12}
         width={3}
-        height={8 + thrusterOffset}
+        height={8 + animationValues.thrusterOffset}
         fill="#ff4400"
         cornerRadius={1}
       />
@@ -135,7 +148,7 @@ export default function Player({ player }: PlayerProps) {
         x={2}
         y={12}
         width={3}
-        height={8 + thrusterOffset}
+        height={8 + animationValues.thrusterOffset}
         fill="#ff4400"
         cornerRadius={1}
       />
@@ -145,7 +158,7 @@ export default function Player({ player }: PlayerProps) {
         x={-5}
         y={18}
         width={3}
-        height={12 + thrusterOffset * 2}
+        height={12 + animationValues.thrusterOffset * 2}
         fill="#ffaa00"
         opacity={0.8}
         cornerRadius={2}
@@ -154,7 +167,7 @@ export default function Player({ player }: PlayerProps) {
         x={2}
         y={18}
         width={3}
-        height={12 + thrusterOffset * 2}
+        height={12 + animationValues.thrusterOffset * 2}
         fill="#ffaa00"
         opacity={0.8}
         cornerRadius={2}
@@ -165,7 +178,7 @@ export default function Player({ player }: PlayerProps) {
         x={-5}
         y={25}
         width={3}
-        height={8 + thrusterOffset * 3}
+        height={8 + animationValues.thrusterOffset * 3}
         fill="#00ffff"
         opacity={0.5}
         cornerRadius={3}
@@ -174,7 +187,7 @@ export default function Player({ player }: PlayerProps) {
         x={2}
         y={25}
         width={3}
-        height={8 + thrusterOffset * 3}
+        height={8 + animationValues.thrusterOffset * 3}
         fill="#00ffff"
         opacity={0.5}
         cornerRadius={3}
@@ -184,11 +197,11 @@ export default function Player({ player }: PlayerProps) {
       <Circle
         x={0}
         y={2}
-        radius={2 + coreGlow * 2}
+        radius={coreRadius}
         fill="rgba(0, 255, 255, 0.9)"
         shadowColor="#00FFFF"
         shadowBlur={8}
-        shadowOpacity={coreGlow}
+        shadowOpacity={animationValues.coreGlow}
       />
       <Circle
         x={0}
@@ -223,7 +236,7 @@ export default function Player({ player }: PlayerProps) {
           <Rect
             x={-17}
             y={-27}
-            width={34 * (player.health / player.maxHealth)}
+            width={34 * healthPercent}
             height={1}
             fill={
               player.health > 60
