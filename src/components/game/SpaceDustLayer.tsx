@@ -53,12 +53,12 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
         color: type === 'dust' ? '#ffffff' : 
                type === 'streak' ? '#cccccc' : 
                '#ffff88',
-        alpha: type === 'dust' ? Math.random() * 0.4 + 0.2 : 
-               type === 'streak' ? Math.random() * 0.6 + 0.3 : 
-               Math.random() * 0.8 + 0.2,
+        alpha: type === 'dust' ? 0.4 : 
+               type === 'streak' ? 0.6 : 
+               0.8, // Fixed opacity - no random, no decay
         life: 1000,
         maxLife: 1000,
-        decay: 0.001,
+        decay: 0, // No decay to prevent blinking
         speedMultiplier: Math.random() * 0.5 + 0.8
       };
       
@@ -92,29 +92,14 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
         newY = -Math.random() * 200 - 50; // Respawn above screen
       }
       
-      // Update particle life and alpha
-      const newLife = particle.life - 16; // Assume ~60fps
-      const newAlpha = particle.alpha * (1 - particle.decay);
-      
-      // Reset particle if life is depleted
-      if (newLife <= 0 || newAlpha < 0.1) {
-        return {
-          ...particle,
-          x: width + Math.random() * 200 + 50, // Respawn from right
-          y: -Math.random() * 200 - 50, // Respawn above screen
-          life: particle.maxLife,
-          alpha: particle.type === 'dust' ? Math.random() * 0.4 + 0.2 : 
-                 particle.type === 'streak' ? Math.random() * 0.6 + 0.3 : 
-                 Math.random() * 0.8 + 0.2
-        };
-      }
+      // No alpha decay - keep fixed opacity to prevent blinking
+      // Only reset particle position when it goes off screen
       
       return {
         ...particle,
         x: newX,
-        y: newY,
-        life: newLife,
-        alpha: Math.max(0.1, newAlpha)
+        y: newY
+        // alpha stays fixed, no life decay
       };
     });
     
