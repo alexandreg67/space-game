@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Group, Rect, Circle } from "react-konva";
 
 export interface StarData {
@@ -8,7 +8,6 @@ export interface StarData {
   y: number;
   size: number;
   opacity: number;
-  twinkle?: number;
   color?: string;
 }
 
@@ -70,7 +69,7 @@ const generateStars = (
       y: Math.random() * height,
       size,
       opacity,
-      twinkle: Math.random() * 2 + 1, // Twinkling speed
+      // No twinkling properties needed
       color
     });
   }
@@ -121,16 +120,7 @@ const ParallaxLayer = React.memo(function ParallaxLayer({
   nebulaCount = 3,
   layerType
 }: ParallaxLayerProps) {
-  const twinklePhaseRef = useRef<number>(Math.random() * 1000);
-  
-  // Update twinkle phase for animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      twinklePhaseRef.current += 16; // ~60fps
-    }, 16);
-    
-    return () => clearInterval(interval);
-  }, []);
+  // No twinkling animation needed anymore
   
   const stars = useMemo(() => 
     generateStars(starCount, width, height, starSizeRange, layerType), 
@@ -186,21 +176,8 @@ const ParallaxLayer = React.memo(function ParallaxLayer({
         const repeatedX = x < -star.size ? x + extendedWidth : x;
         const repeatedX2 = x > width ? x - extendedWidth : undefined;
         
-        // Subtle twinkling effect based on layer type
-        let currentOpacity = star.opacity || 1;
-        
-        // Only add twinkling for near stars, very subtle for others
-        if (layerType === 'near' && star.size > 1.5) {
-          const twinkleTime = (twinklePhaseRef.current + index * 200) * 0.0005;
-          const twinkleOffset = Math.sin(twinkleTime * (star.twinkle || 1)) * 0.05; // Much more subtle
-          currentOpacity = Math.max(0.1, currentOpacity + twinkleOffset);
-        } else if (layerType === 'mid' && star.size > 2) {
-          // Very subtle twinkling for medium stars
-          const twinkleTime = (twinklePhaseRef.current + index * 300) * 0.0003;
-          const twinkleOffset = Math.sin(twinkleTime * (star.twinkle || 1)) * 0.02;
-          currentOpacity = Math.max(0.1, currentOpacity + twinkleOffset);
-        }
-        // Deep stars don't twinkle at all for a more realistic space effect
+        // No twinkling effects - static opacity for all stars
+        const currentOpacity = star.opacity || 1;
         
         return (
           <React.Fragment key={`star-${index}`}>

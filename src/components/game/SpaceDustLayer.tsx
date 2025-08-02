@@ -43,10 +43,10 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
         id: `space-dust-${i}`,
         active: true,
         type,
-        x: Math.random() * width, // Spawn across the width
+        x: width + Math.random() * 200 + 50, // Spawn from right side
         y: -Math.random() * 200 - 50, // Spawn above the screen
-        vx: (Math.random() - 0.5) * 10, // Slight horizontal drift
-        vy: 50 + Math.random() * 100, // Base downward movement
+        vx: -50 - Math.random() * 100, // Base leftward movement (horizontal scroll)
+        vy: 20 + Math.random() * 40, // Moderate downward movement
         size: type === 'dust' ? Math.random() * 1.5 + 0.5 : 
               type === 'streak' ? Math.random() * 2 + 1 : 
               Math.random() * 3 + 1,
@@ -74,24 +74,22 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
     const updatedParticles = particlesRef.current.map(particle => {
       if (!particle.active) return particle;
       
-      // Calculate movement for space travel effect (top to bottom)
+      // Calculate movement for space travel effect (horizontal scroll + top spawn)
       const movementSpeed = speed * particle.speedMultiplier;
       
-      // Update position - vertical movement with slight horizontal drift
-      let newX = particle.x + particle.vx * 0.016; // Horizontal drift
-      let newY = particle.y + particle.vy * movementSpeed * 0.016; // Downward movement
+      // Update position - horizontal scroll with vertical drift
+      let newX = particle.x + particle.vx * movementSpeed * 0.016; // Horizontal scroll
+      let newY = particle.y + particle.vy * 0.016; // Downward movement
       
-      // Handle horizontal boundaries (keep particles within screen width)
-      if (newX < 0) {
-        newX = width;
-      } else if (newX > width) {
-        newX = 0;
+      // Handle horizontal wrapping (respawn from right when exiting left)
+      if (newX < -50) {
+        newX = width + Math.random() * 200 + 50; // Respawn from right
+        newY = -Math.random() * 200 - 50; // Also reset to top spawn area
       }
       
       // Handle vertical wrapping (respawn at top when reaching bottom)
       if (newY > height + 50) {
         newY = -Math.random() * 200 - 50; // Respawn above screen
-        newX = Math.random() * width; // Random horizontal position
       }
       
       // Update particle life and alpha
@@ -102,7 +100,7 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
       if (newLife <= 0 || newAlpha < 0.1) {
         return {
           ...particle,
-          x: Math.random() * width,
+          x: width + Math.random() * 200 + 50, // Respawn from right
           y: -Math.random() * 200 - 50, // Respawn above screen
           life: particle.maxLife,
           alpha: particle.type === 'dust' ? Math.random() * 0.4 + 0.2 : 
@@ -148,7 +146,7 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
   return (
     <Group>
       {particles.map((particle) => {
-        if (!particle.active || particle.y > height + 100 || particle.y < -200) {
+        if (!particle.active || particle.x < -100 || particle.y > height + 100) {
           return null;
         }
         
@@ -171,7 +169,7 @@ const SpaceDustLayer = React.memo(function SpaceDustLayer({
                 key={particle.id}
                 points={[
                   particle.x, particle.y,
-                  particle.x, particle.y - particle.size * 8
+                  particle.x + particle.size * 8, particle.y
                 ]}
                 stroke={particle.color}
                 strokeWidth={particle.size * 0.5}
