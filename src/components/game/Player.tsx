@@ -122,7 +122,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ff6b35"
         stroke="#ff9500"
         strokeWidth={1}
-        opacity={animationValues.weaponPulse}
+        opacity={0.9}
         cornerRadius={1}
       />
       <Rect
@@ -133,7 +133,7 @@ export default function Player({ player }: PlayerProps) {
         fill="#ff6b35"
         stroke="#ff9500"
         strokeWidth={1}
-        opacity={animationValues.weaponPulse}
+        opacity={0.9}
         cornerRadius={1}
       />
 
@@ -203,7 +203,7 @@ export default function Player({ player }: PlayerProps) {
         fill="rgba(0, 255, 255, 0.9)"
         shadowColor="#00FFFF"
         shadowBlur={8}
-        shadowOpacity={animationValues.coreGlow}
+        shadowOpacity={0.8}
       />
       <Circle
         x={0}

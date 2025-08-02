@@ -345,7 +345,7 @@ export default function Enemy({ enemy }: EnemyProps) {
             y={0}
             radius={enemy.size.x}
             fill="#ffffff"
-            opacity={0.4 * Math.abs(Math.sin(gameTime * 0.025))}
+            opacity={0.4}
           />
           {/* Sparks/damage particles */}
           {Array.from({ length: 3 }).map((_, i) => (
@@ -355,7 +355,7 @@ export default function Enemy({ enemy }: EnemyProps) {
               y={Math.sin((i * 120 + gameTime * 0.1) * Math.PI / 180) * (enemy.size.x / 2 + 2)}
               radius={1}
               fill="#ffaa00"
-              opacity={0.8 * Math.sin(gameTime * 0.02 + i)}
+              opacity={0.8}
             />
           ))}
         </Group>

@@ -202,7 +202,7 @@ export const createParticle = (): Particle => ({
   color: '#ffffff',
   size: 2,
   alpha: 1,
-  decay: 0.02
+  decay: 0
 });
 
 export const createParticlePool = () => {
@@ -220,7 +220,7 @@ export const createParticlePool = () => {
       particle.color = '#ffffff';
       particle.size = 2;
       particle.alpha = 1;
-      particle.decay = 0.02;
+      particle.decay = 0;
     },
     200, // Initial size
     500  // Max size

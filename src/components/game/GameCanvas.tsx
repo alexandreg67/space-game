@@ -12,8 +12,8 @@ import { getBulletFromPool } from "@/lib/game/utils/objectPool";
 import Player from "./Player";
 import Enemy from "./Enemy";
 import Bullet from "./Bullet";
-import EnhancedBackground from "./EnhancedBackground";
 import SpaceDustLayer from "./SpaceDustLayer";
+import SpeedBackground from "./SpeedBackground";
 import HUD from "./UI/HUD";
 
 interface GameCanvasProps {
@@ -377,24 +377,23 @@ export default function GameCanvas({
         height={height}
         style={{ display: "block" }}
       >
-        {/* Background Layers */}
+        {/* Background Layer - Speed & Progression Background */}
         <Layer name="background" listening={false}>
-          <EnhancedBackground 
+          <SpeedBackground 
             width={width} 
             height={height} 
             offset={backgroundOffset}
-            enableEnhanced={true}
           />
         </Layer>
-        
-        {/* Foreground Effects Layer - Only render after pools are initialized */}
+
+        {/* Foreground Effects Layer - Minimal particles for depth */}
         {poolsInitialized && (
           <Layer name="foreground-effects" listening={false}>
             <SpaceDustLayer 
               width={width} 
               height={height} 
               offset={backgroundOffset}
-              particleCount={80}
+              particleCount={8}
               speed={1.5}
             />
           </Layer>
