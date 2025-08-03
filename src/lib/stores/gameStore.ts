@@ -222,7 +222,7 @@ export const useGameStore = create<GameStore>()(
                 ...state.player,
                 shieldHealth: Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth)),
                 shieldActive: shieldHealth > 0,
-                shieldDown: shieldHealth <= 0 && state.player.shieldDown, // Maintain shieldDown state when health is 0
+                shieldDown: shieldHealth <= 0, // Shield is down when health reaches 0
               }
             : null,
         }));
@@ -236,7 +236,8 @@ export const useGameStore = create<GameStore>()(
         
         const timeSinceLastDamage = now - state.player.lastShieldDamageTime;
         
-        // Allow regeneration even when shield is down, but respect the delay
+        // Allow regeneration even when shield is down to enable recovery gameplay
+        // This is intentional - players can recover from shield depletion
         if (timeSinceLastDamage >= state.player.shieldRegenDelay && 
             state.player.shieldHealth < state.player.maxShieldHealth) {
           const regenAmount = (state.player.shieldRegenRate * deltaTime) / 1000;

@@ -84,12 +84,10 @@ export class ShieldSystem {
     if (gameState.player && !gameState.player.shieldDown && gameState.player.shieldHealth > 0) {
       // Shield is active - absorb damage as before
       gameState.damageShield(damage);
-      console.log(`Shield absorbed ${damage} damage. Shield health: ${gameState.player.shieldHealth - damage}`);
     } else {
       // Shield is down - enemy breach causes direct life loss
       const newLives = gameState.lives - 1;
       gameState.updateLives(newLives);
-      console.log(`Shield down! Enemy breach caused life loss. Lives remaining: ${newLives}`);
       
       // Check for game over
       if (newLives <= 0) {
@@ -122,8 +120,6 @@ export class ShieldSystem {
     
     // Set shield to "down" state - protection is disabled but game continues
     gameState.setShieldDown(true);
-    
-    console.log('Shield depleted - protection disabled. Next enemy breach will cause life loss.');
   }
 
   // Destroy enemy that breached shield
