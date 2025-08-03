@@ -9,7 +9,9 @@ import type {
   InputState,
   GameConfig,
   Vector2D,
+  ScreenEffect,
 } from "@/types/game";
+import type { Particle } from "@/lib/game/utils/objectPool";
 
 interface GameStore extends GameState {
   // Entities
@@ -26,6 +28,12 @@ interface GameStore extends GameState {
 
   // Background scroll
   backgroundOffset: number;
+
+  // Screen effects
+  screenEffects: ScreenEffect[];
+
+  // Shield particles
+  shieldParticles: Particle[];
 
   // Actions
   initializeGame: () => void;
@@ -68,6 +76,19 @@ interface GameStore extends GameState {
   // Entity updates
   updateEntities: (deltaTime: number) => void;
   cleanupInactiveEntities: () => void;
+
+  // Screen effects
+  addScreenEffect: (effect: ScreenEffect) => void;
+  updateScreenEffects: (currentTime: number) => void;
+
+  // Shield particles
+  addShieldParticle: (particle: Particle) => void;
+  addShieldParticles: (particles: Particle[]) => void;
+  updateShieldParticles: (deltaTime: number) => void;
+  clearShieldParticles: () => void;
+
+  // Accessibility settings
+  updateAccessibilitySettings: (settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>) => void;
 }
 
 const defaultConfig: GameConfig = {
@@ -84,6 +105,13 @@ const defaultConfig: GameConfig = {
   shieldRegenRate: 0.5, // Points per second regeneration
   shieldRegenDelay: 3000, // Delay after damage before regen starts (ms)
   shieldMaxHealth: 100, // Maximum shield health
+  // Visual effects settings
+  enableScreenEffects: true, // Enable screen flash and shake effects
+  // Accessibility settings
+  enableHapticFeedback: true, // Enable haptic feedback (requires user consent)
+  enableScreenFlash: true, // Enable screen flash effects
+  reducedMotion: false, // Reduce motion for accessibility
+  flashIntensityLimit: 0.6, // Maximum flash opacity (0.6 = 60% for accessibility)
 };
 
 const defaultInputState: InputState = {
@@ -107,7 +135,8 @@ export const useGameStore = create<GameStore>()(
           enemies: [],
           bullets: [],
           powerups: [],
-          backgroundOffset: 0,
+          screenEffects: [],
+          shieldParticles: [],
           input: { ...defaultInputState, keys: new Set() },
         });
         actions.createPlayer();
@@ -403,6 +432,70 @@ export const useGameStore = create<GameStore>()(
           powerups: state.powerups.filter((powerup) => powerup.active),
         }));
       },
+
+      // Screen effects management
+      addScreenEffect: (effect: ScreenEffect) => {
+        set((state) => ({
+          screenEffects: [...state.screenEffects, effect],
+        }));
+      },
+
+      updateScreenEffects: (currentTime: number) => {
+        set((state) => ({
+          screenEffects: state.screenEffects.filter(
+            (effect) => currentTime - effect.timestamp < effect.duration
+          ),
+        }));
+      },
+
+      // Shield particles management
+      addShieldParticle: (particle: Particle) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, particle],
+        }));
+      },
+
+      addShieldParticles: (particles: Particle[]) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, ...particles],
+        }));
+      },
+
+      updateShieldParticles: (deltaTime: number) => {
+        const deltaSeconds = deltaTime / 1000;
+        
+        set((state) => ({
+          shieldParticles: state.shieldParticles
+            .map(particle => {
+              const newLife = particle.life - deltaTime;
+              // Pre-calculate alpha based on life ratio for better performance
+              const alphaRatio = particle.maxLife > 0 ? newLife / particle.maxLife : 0;
+              const calculatedAlpha = Math.max(0, alphaRatio);
+              
+              return {
+                ...particle,
+                x: particle.x + particle.vx * deltaSeconds,
+                y: particle.y + particle.vy * deltaSeconds,
+                life: newLife,
+                alpha: calculatedAlpha
+              };
+            })
+            .filter(particle => particle.life > 0)
+        }));
+      },
+
+      clearShieldParticles: () => {
+        set({ shieldParticles: [] });
+      },
+
+      // Accessibility settings management
+      updateAccessibilitySettings: (
+        settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>
+      ) => {
+        set((state) => ({
+          config: { ...state.config, ...settings }
+        }));
+      },
     };
 
     return {
@@ -422,6 +515,8 @@ export const useGameStore = create<GameStore>()(
       input: defaultInputState,
       config: defaultConfig,
       backgroundOffset: 0,
+      screenEffects: [],
+      shieldParticles: [],
 
       // Return stable action references
       ...actions,
@@ -470,6 +565,8 @@ export const useGameActions = () =>
     updateBackgroundOffset: state.updateBackgroundOffset,
     updateEntities: state.updateEntities,
     cleanupInactiveEntities: state.cleanupInactiveEntities,
+    addScreenEffect: state.addScreenEffect,
+    updateScreenEffects: state.updateScreenEffects,
     addKey: state.addKey,
     removeKey: state.removeKey,
     updateMouse: state.updateMouse,

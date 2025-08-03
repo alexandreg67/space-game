@@ -1,5 +1,5 @@
 import { useGameStore } from '@/lib/stores/gameStore';
-import { releaseEnemyToPool } from '@/lib/game/utils/objectPool';
+import { releaseEnemyToPool, getParticleFromPool } from '@/lib/game/utils/objectPool';
 import type { EnemyEntity, ShieldZone } from '@/types/game';
 
 export class ShieldSystem {
@@ -67,10 +67,21 @@ export class ShieldSystem {
     // Increase damage based on how deep the enemy penetrated
     damage += Math.floor(penetrationDepth / 10);
 
+    // Calculate impact point and angle
+    const impactX = enemy.position.x;
+    const impactY = this.shieldZone.y;
+    const impactAngle = Math.atan2(enemy.velocity.y, enemy.velocity.x);
+    const severity = Math.min(damage / 20, 1.0); // Normalize to 0-1
+
+    // Create enhanced shield breach effects
+    this.createShieldBreachEffect(impactX, impactY, impactAngle, severity);
+    this.createShieldRippleEffect(impactX, impactY, severity);
+
+    // Create screen effects for visual feedback
+    this.createShieldImpactFeedback(severity);
+
     // Apply shield damage
     gameState.damageShield(damage);
-
-
 
     // Remove the enemy
     this.destroyBreachingEnemy(enemy);
@@ -120,8 +131,132 @@ export class ShieldSystem {
     releaseEnemyToPool(enemy);
   }
 
+  // Create enhanced shield breach particle effect
+  private createShieldBreachEffect(x: number, y: number, angle: number, severity: number): void {
+    const particleCount = Math.floor(12 + severity * 8); // 12-20 particles based on severity
+    const colors = severity > 0.7 ? 
+      ['#ff0000', '#ff4400', '#ffaa00', '#ffffff'] : // High damage - fire colors
+      ['#00ffff', '#44aaff', '#88ccff', '#aaccff']; // Normal damage - shield colors
 
+    const particles = [];
 
+    for (let i = 0; i < particleCount; i++) {
+      const particle = getParticleFromPool();
+      
+      // Create directional spread based on impact angle
+      const spreadAngle = (Math.PI / 3) * (Math.random() - 0.5); // 60-degree spread
+      const particleAngle = angle + spreadAngle;
+      const speed = 80 + severity * 120 + Math.random() * 60; // Variable speed
+      
+      particle.id = `shield_impact_${Date.now()}_${i}`;
+      particle.x = x + (Math.random() - 0.5) * 20; // Small spread at impact point
+      particle.y = y + (Math.random() - 0.5) * 10;
+      particle.vx = Math.cos(particleAngle) * speed;
+      particle.vy = Math.sin(particleAngle) * speed;
+      
+      // Particle properties
+      particle.life = 400 + severity * 400; // Longer life for severe impacts
+      particle.maxLife = particle.life;
+      particle.color = colors[Math.floor(Math.random() * colors.length)];
+      particle.size = 2 + severity * 3 + Math.random() * 2;
+      particle.alpha = 1;
+      particle.decay = 0.006 + Math.random() * 0.004; // Variable decay
+      particle.type = severity > 0.5 ? 'shield_spark' : 'shield_impact'; // Different types based on severity
+      
+      particles.push(particle);
+    }
+
+    // Add all particles to the game store for rendering
+    useGameStore.getState().addShieldParticles(particles);
+  }
+
+  // Create shield ripple effect (visual-only particles)
+  private createShieldRippleEffect(x: number, y: number, severity: number): void {
+    const ringCount = Math.floor(2 + severity * 2); // 2-4 concentric rings
+    const particles = [];
+    
+    for (let ring = 0; ring < ringCount; ring++) {
+      const delayOffset = ring * 100; // Stagger timing via initial delay
+      const particlesPerRing = 16 + ring * 4; // More particles for outer rings
+      
+      for (let i = 0; i < particlesPerRing; i++) {
+        const particle = getParticleFromPool();
+        const angle = (Math.PI * 2 * i) / particlesPerRing;
+        const speed = 40 + ring * 20; // Faster for outer rings
+        
+        particle.id = `shield_ripple_${Date.now()}_${ring}_${i}`;
+        particle.x = x;
+        particle.y = y;
+        particle.vx = Math.cos(angle) * speed;
+        particle.vy = Math.sin(angle) * speed * 0.3; // Flatten vertically for shield effect
+        
+        // Ring-specific properties with staggered start
+        particle.life = 600 - ring * 100 + delayOffset; // Delay start of ripple ring
+        particle.maxLife = particle.life;
+        particle.color = severity > 0.5 ? '#ff4400' : '#00ffff';
+        particle.size = 1 + Math.random();
+        particle.alpha = 0.8 - ring * 0.15; // Fade outer rings
+        particle.decay = 0.003 + ring * 0.002;
+        particle.type = 'shield_ripple';
+        
+        particles.push(particle);
+      }
+    }
+
+    // Add all ripple particles to the game store
+    useGameStore.getState().addShieldParticles(particles);
+  }
+
+  // Create visual and haptic feedback for shield impacts
+  private createShieldImpactFeedback(severity: number): void {
+    const gameState = useGameStore.getState();
+
+    // Screen flash effect - intensity based on severity
+    const flashIntensity = Math.min(0.8, severity * 1.2); // Cap at 0.8 for accessibility
+    const flashColor = severity > 0.7 ? '#ff4400' : '#00aaff'; // Orange for heavy hits, blue for normal
+    const flashDuration = Math.floor(100 + severity * 150); // 100-250ms duration
+
+    gameState.addScreenEffect({
+      id: `shield_flash_${Date.now()}`,
+      type: 'flash',
+      color: flashColor,
+      intensity: flashIntensity,
+      duration: flashDuration,
+      timestamp: Date.now()
+    });
+
+    // Screen shake effect - more intense for severe impacts
+    const shakeIntensity = Math.min(8, severity * 12); // Max 8px shake
+    const shakeDuration = Math.floor(80 + severity * 120); // 80-200ms duration
+
+    gameState.addScreenEffect({
+      id: `shield_shake_${Date.now()}`,
+      type: 'shake',
+      intensity: shakeIntensity,
+      duration: shakeDuration,
+      timestamp: Date.now()
+    });
+
+    // Haptic feedback with user consent and improved permission handling
+    if (gameState.config.enableHapticFeedback && 
+        typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      const vibrationPattern = severity > 0.7 ? [50, 50, 100] : [30]; // Long pattern for severe hits
+      
+      // Modern browsers may require user gesture for vibration API
+      try {
+        const result = navigator.vibrate(vibrationPattern);
+        // Some browsers return false if vibration failed
+        if (!result && process.env.NODE_ENV === 'development') {
+          console.debug('Haptic feedback may require user gesture or permission');
+        }
+      } catch (error) {
+        // Silently fail if haptic feedback is not available or blocked
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Haptic feedback failed:', error);
+        }
+      }
+    }
+  }
 
   // Get shield zone for rendering
   getShieldZone(): ShieldZone {
