@@ -180,6 +180,7 @@ export const createPowerupPool = () => {
 
 // Particle system for visual effects
 export interface Particle {
+  id?: string;
   x: number;
   y: number;
   vx: number;
@@ -190,10 +191,12 @@ export interface Particle {
   size: number;
   alpha: number;
   decay: number;
+  type?: 'default' | 'shield_impact' | 'shield_spark' | 'shield_ripple' | 'explosion';
 }
 
 // Fallback particle creation function
 export const createParticle = (): Particle => ({
+  id: '',
   x: 0,
   y: 0,
   vx: 0,
@@ -203,7 +206,8 @@ export const createParticle = (): Particle => ({
   color: '#ffffff',
   size: 2,
   alpha: 1,
-  decay: 0
+  decay: 0,
+  type: 'default'
 });
 
 export const createParticlePool = () => {
@@ -212,6 +216,7 @@ export const createParticlePool = () => {
     createParticle,
     // Reset function
     (particle) => {
+      particle.id = '';
       particle.x = 0;
       particle.y = 0;
       particle.vx = 0;
@@ -222,6 +227,7 @@ export const createParticlePool = () => {
       particle.size = 2;
       particle.alpha = 1;
       particle.decay = 0;
+      particle.type = 'default';
     },
     200, // Initial size
     500  // Max size

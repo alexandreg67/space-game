@@ -11,6 +11,7 @@ import type {
   Vector2D,
   ScreenEffect,
 } from "@/types/game";
+import type { Particle } from "@/lib/game/utils/objectPool";
 
 interface GameStore extends GameState {
   // Entities
@@ -30,6 +31,9 @@ interface GameStore extends GameState {
 
   // Screen effects
   screenEffects: ScreenEffect[];
+
+  // Shield particles
+  shieldParticles: Particle[];
 
   // Actions
   initializeGame: () => void;
@@ -76,6 +80,12 @@ interface GameStore extends GameState {
   // Screen effects
   addScreenEffect: (effect: ScreenEffect) => void;
   updateScreenEffects: (currentTime: number) => void;
+
+  // Shield particles
+  addShieldParticle: (particle: Particle) => void;
+  addShieldParticles: (particles: Particle[]) => void;
+  updateShieldParticles: (deltaTime: number) => void;
+  clearShieldParticles: () => void;
 }
 
 const defaultConfig: GameConfig = {
@@ -429,6 +439,37 @@ export const useGameStore = create<GameStore>()(
           ),
         }));
       },
+
+      // Shield particles management
+      addShieldParticle: (particle: Particle) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, particle],
+        }));
+      },
+
+      addShieldParticles: (particles: Particle[]) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, ...particles],
+        }));
+      },
+
+      updateShieldParticles: (deltaTime: number) => {
+        set((state) => ({
+          shieldParticles: state.shieldParticles
+            .map(particle => ({
+              ...particle,
+              x: particle.x + particle.vx * (deltaTime / 1000),
+              y: particle.y + particle.vy * (deltaTime / 1000),
+              life: particle.life - deltaTime,
+              alpha: Math.max(0, particle.life / particle.maxLife)
+            }))
+            .filter(particle => particle.life > 0)
+        }));
+      },
+
+      clearShieldParticles: () => {
+        set({ shieldParticles: [] });
+      },
     };
 
     return {
@@ -449,6 +490,7 @@ export const useGameStore = create<GameStore>()(
       config: defaultConfig,
       backgroundOffset: 0,
       screenEffects: [],
+      shieldParticles: [],
 
       // Return stable action references
       ...actions,

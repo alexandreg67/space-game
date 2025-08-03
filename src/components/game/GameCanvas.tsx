@@ -17,6 +17,7 @@ import SpaceDustLayer from "./SpaceDustLayer";
 import SpeedBackground from "./SpeedBackground";
 import ShieldZone from "./ShieldZone";
 import ScreenEffects from "./effects/ScreenEffects";
+import ParticleLayer from "./ParticleLayer";
 import HUD from "./UI/HUD";
 
 interface GameCanvasProps {
@@ -355,6 +356,9 @@ export default function GameCanvas({
       // Update screen effects (cleanup expired effects)
       useGameStore.getState().updateScreenEffects(currentTime);
 
+      // Update shield particles (movement and cleanup)
+      useGameStore.getState().updateShieldParticles(deltaTime);
+
       // Continue the loop
       animationRef.current = requestAnimationFrame(gameLoop);
     },
@@ -434,6 +438,9 @@ export default function GameCanvas({
             .map((bullet) => (
               <Bullet key={bullet.id} bullet={bullet} />
             ))}
+
+          {/* Shield collision particles */}
+          <ParticleLayer width={width} height={height} />
         </Layer>
 
 
