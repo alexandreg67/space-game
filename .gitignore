@@ -47,3 +47,4 @@ next-env.d.ts
 /public/sounds/**/*.ogg
 !/public/sounds/README.md
 !/public/sounds/**/.gitkeep
+dev-server.log
