@@ -15,17 +15,10 @@ import type { Particle } from "@/lib/game/utils/objectPool";
 
 // Helper function to calculate shield status flags based on health
 function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
-  const flags = {
+  return {
     shieldActive: newShieldHealth > 0,
     shieldDown: newShieldHealth <= 0, // Shield is down when health is depleted
   };
-  
-  // Debug logging for shield state changes
-  if (flags.shieldDown !== currentShieldDown) {
-    console.log(`🛡️ Shield state change: ${currentShieldDown ? 'DOWN' : 'UP'} → ${flags.shieldDown ? 'DOWN' : 'UP'} (health: ${newShieldHealth})`);
-  }
-  
-  return flags;
 }
 
 interface GameStore extends GameState {
