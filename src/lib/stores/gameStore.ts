@@ -13,8 +13,8 @@ import type {
 } from "@/types/game";
 import type { Particle } from "@/lib/game/utils/objectPool";
 
-// Helper function to calculate shield state based on health
-function calculateShieldState(currentShieldDown: boolean, newShieldHealth: number) {
+// Helper function to calculate shield status flags based on health
+function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
   return {
     shieldActive: newShieldHealth > 0,
     shieldDown: newShieldHealth > 0 ? false : currentShieldDown, // Clear shieldDown when regenerated
@@ -228,14 +228,14 @@ export const useGameStore = create<GameStore>()(
           if (!state.player) return state;
           
           const newShieldHealth = Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth));
-          const shieldState = calculateShieldState(state.player.shieldDown, newShieldHealth);
+          const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
           
           return {
             ...state,
             player: {
               ...state.player,
               shieldHealth: newShieldHealth,
-              ...shieldState,
+              ...shieldFlags,
             }
           };
         });
@@ -263,14 +263,14 @@ export const useGameStore = create<GameStore>()(
           set((state) => {
             if (!state.player) return state;
             
-            const shieldState = calculateShieldState(state.player.shieldDown, newShieldHealth);
+            const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
             
             return {
               ...state,
               player: {
                 ...state.player,
                 shieldHealth: newShieldHealth,
-                ...shieldState,
+                ...shieldFlags,
               }
             };
           });

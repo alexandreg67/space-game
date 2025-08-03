@@ -4,6 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Line, Rect, Group, Circle } from "react-konva";
 import { useGameStore } from "@/lib/stores/gameStore";
 
+// Shield visual constants
+const SHIELD_DOWN_BASE_OPACITY = 0.8;
+const SHIELD_PULSE_FREQUENCY = 3;
+const SHIELD_PULSE_AMPLITUDE = 0.3;
+const SHIELD_ACTIVE_BASE_OPACITY = 0.6;
+const SHIELD_INACTIVE_OPACITY = 0.2;
+
 interface ShieldZoneProps {
   width: number;
   height: number;
@@ -44,8 +51,11 @@ export default function ShieldZone({ width, height, shieldHeight }: ShieldZonePr
   const shieldColor = getShieldColor();
   
   // Enhanced shield opacity with pulsing effects
-  const baseOpacity = isShieldDown ? 0.8 + Math.sin(pulsePhase * 3) * 0.3 : // Intense pulsing when down
-                      shieldActive ? 0.6 + (shieldPercentage * 0.4) : 0.2;
+  const baseOpacity = isShieldDown 
+    ? SHIELD_DOWN_BASE_OPACITY + Math.sin(pulsePhase * SHIELD_PULSE_FREQUENCY) * SHIELD_PULSE_AMPLITUDE // Intense pulsing when down
+    : shieldActive 
+    ? SHIELD_ACTIVE_BASE_OPACITY + (shieldPercentage * 0.4) 
+    : SHIELD_INACTIVE_OPACITY;
   const pulseIntensity = (shieldPercentage < 0.3 && !isShieldDown) ? Math.sin(pulsePhase) * 0.3 : 0;
   const shieldOpacity = Math.max(0.1, baseOpacity + pulseIntensity);
 

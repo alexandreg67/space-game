@@ -11,7 +11,6 @@ function getShieldStatus(player: PlayerEntity): 'down' | 'recharging' | 'active'
   if (player.shieldDown) return 'down';
   
   // Shield health based states (when not down)
-  if (player.shieldHealth <= 0) return 'down'; // Fallback safety check
   if (player.shieldHealth >= player.maxShieldHealth) return 'full';
   if (player.shieldHealth < player.maxShieldHealth) return 'recharging';
   return 'active';
