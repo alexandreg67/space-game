@@ -227,7 +227,8 @@ export const useGameStore = create<GameStore>()(
               ...state.player,
               shieldHealth: newShieldHealth,
               shieldActive: newShieldHealth > 0,
-              shieldDown: newShieldHealth <= 0, // Manage shield down state directly here
+              // Only clear shieldDown when shield has health - don't set it here
+              shieldDown: newShieldHealth > 0 ? false : state.player.shieldDown,
             }
           };
         });
@@ -257,7 +258,7 @@ export const useGameStore = create<GameStore>()(
               ...state.player,
               shieldHealth: newShieldHealth,
               shieldActive: newShieldHealth > 0,
-              shieldDown: newShieldHealth <= 0,
+              shieldDown: newShieldHealth > 0 ? false : state.player.shieldDown, // Clear shieldDown when regenerated
             } : null,
           }));
         }
@@ -287,7 +288,7 @@ export const useGameStore = create<GameStore>()(
             ? {
                 ...state.player,
                 shieldDown: isDown,
-                shieldActive: !isDown, // Shield is active when not down
+                shieldActive: state.player.shieldHealth > 0, // Shield is active when it has health
               }
             : null,
         }));
