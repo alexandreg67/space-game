@@ -7,8 +7,11 @@ import type { PlayerEntity } from "@/types/game";
 
 // Helper function to determine shield status
 function getShieldStatus(player: PlayerEntity): 'down' | 'recharging' | 'active' | 'full' {
+  // Use shieldDown as single source of truth for "down" state
   if (player.shieldDown) return 'down';
-  if (player.shieldHealth <= 0) return 'down';
+  
+  // Shield health based states (when not down)
+  if (player.shieldHealth <= 0) return 'down'; // Fallback safety check
   if (player.shieldHealth >= player.maxShieldHealth) return 'full';
   if (player.shieldHealth < player.maxShieldHealth) return 'recharging';
   return 'active';

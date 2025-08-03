@@ -13,6 +13,14 @@ import type {
 } from "@/types/game";
 import type { Particle } from "@/lib/game/utils/objectPool";
 
+// Helper function to calculate shield state based on health
+function calculateShieldState(currentShieldDown: boolean, newShieldHealth: number) {
+  return {
+    shieldActive: newShieldHealth > 0,
+    shieldDown: newShieldHealth > 0 ? false : currentShieldDown, // Clear shieldDown when regenerated
+  };
+}
+
 interface GameStore extends GameState {
   // Entities
   player: PlayerEntity | null;
@@ -220,15 +228,14 @@ export const useGameStore = create<GameStore>()(
           if (!state.player) return state;
           
           const newShieldHealth = Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth));
+          const shieldState = calculateShieldState(state.player.shieldDown, newShieldHealth);
           
           return {
             ...state,
             player: {
               ...state.player,
               shieldHealth: newShieldHealth,
-              shieldActive: newShieldHealth > 0,
-              // Only clear shieldDown when shield has health - don't set it here
-              shieldDown: newShieldHealth > 0 ? false : state.player.shieldDown,
+              ...shieldState,
             }
           };
         });
@@ -253,14 +260,20 @@ export const useGameStore = create<GameStore>()(
           );
           
           // Update shield health directly to avoid recursive calls
-          set((state) => ({
-            player: state.player ? {
-              ...state.player,
-              shieldHealth: newShieldHealth,
-              shieldActive: newShieldHealth > 0,
-              shieldDown: newShieldHealth > 0 ? false : state.player.shieldDown, // Clear shieldDown when regenerated
-            } : null,
-          }));
+          set((state) => {
+            if (!state.player) return state;
+            
+            const shieldState = calculateShieldState(state.player.shieldDown, newShieldHealth);
+            
+            return {
+              ...state,
+              player: {
+                ...state.player,
+                shieldHealth: newShieldHealth,
+                ...shieldState,
+              }
+            };
+          });
         }
       },
 

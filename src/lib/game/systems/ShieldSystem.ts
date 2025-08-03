@@ -81,6 +81,7 @@ export class ShieldSystem {
     this.createShieldImpactFeedback(severity);
 
     // Cascading protection logic: Shield protects if not down AND has health, otherwise direct life loss
+    // Both checks are needed: shieldDown (game state) and shieldHealth > 0 (actual protection points)
     if (gameState.player && !gameState.player.shieldDown && gameState.player.shieldHealth > 0) {
       // Shield is active - absorb damage as before
       gameState.damageShield(damage);
