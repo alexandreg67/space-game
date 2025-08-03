@@ -3,6 +3,18 @@
 import React, { useMemo } from "react";
 import { Text, Rect, Group } from "react-konva";
 import { useGameStore } from "@/lib/stores/gameStore";
+import type { PlayerEntity } from "@/types/game";
+
+// Helper function to determine shield status
+function getShieldStatus(player: PlayerEntity): 'down' | 'recharging' | 'active' | 'full' {
+  // Use shieldDown as single source of truth for "down" state
+  if (player.shieldDown) return 'down';
+  
+  // Shield health based states (when not down)
+  if (player.shieldHealth >= player.maxShieldHealth) return 'full';
+  if (player.shieldHealth < player.maxShieldHealth) return 'recharging';
+  return 'active';
+}
 
 interface HUDProps {
   width: number;
@@ -134,18 +146,38 @@ export default function HUD({ width, height }: HUDProps) {
             fill="#00ffff"
           />
 
-          {/* Shield status indicator */}
-          {player.shieldHealth <= 0 && (
-            <Text
-              x={360}
-              y={height - 40}
-              text="SHIELD DOWN!"
-              fontSize={12}
-              fontFamily="Arial"
-              fill="#ff0000"
-              fontStyle="bold"
-            />
-          )}
+          {/* Shield status indicator using helper function */}
+          {(() => {
+            const status = getShieldStatus(player);
+            switch (status) {
+              case 'down':
+                return (
+                  <Text
+                    x={360}
+                    y={height - 40}
+                    text="⚠ SHIELD DOWN! ⚠"
+                    fontSize={14}
+                    fontFamily="Arial"
+                    fill="#ff0000"
+                    fontStyle="bold"
+                  />
+                );
+              case 'recharging':
+                return (
+                  <Text
+                    x={360}
+                    y={height - 40}
+                    text="RECHARGING..."
+                    fontSize={10}
+                    fontFamily="Arial"
+                    fill="#ffff00"
+                    fontStyle="italic"
+                  />
+                );
+              default:
+                return null;
+            }
+          })()}
         </Group>
       )}
     </Group>

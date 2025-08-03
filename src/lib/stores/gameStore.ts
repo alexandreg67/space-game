@@ -13,6 +13,14 @@ import type {
 } from "@/types/game";
 import type { Particle } from "@/lib/game/utils/objectPool";
 
+// Helper function to calculate shield status flags based on health
+function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
+  return {
+    shieldActive: newShieldHealth > 0,
+    shieldDown: newShieldHealth <= 0, // Shield is down when health is depleted
+  };
+}
+
 interface GameStore extends GameState {
   // Entities
   player: PlayerEntity | null;
@@ -50,6 +58,7 @@ interface GameStore extends GameState {
   updatePlayerShield: (shieldHealth: number) => void;
   regenerateShield: (deltaTime: number) => void;
   damageShield: (damage: number) => void;
+  setShieldDown: (isDown: boolean) => void;
 
   // Entity management
   addEnemy: (enemy: EnemyEntity) => void;
@@ -187,6 +196,7 @@ export const useGameStore = create<GameStore>()(
           shieldRegenDelay: config.shieldRegenDelay,
           lastShieldDamageTime: 0,
           shieldActive: true,
+          shieldDown: false,
         };
         set({ player });
       },
@@ -214,26 +224,33 @@ export const useGameStore = create<GameStore>()(
       },
 
       updatePlayerShield: (shieldHealth: number) => {
-        set((state) => ({
-          player: state.player
-            ? {
-                ...state.player,
-                shieldHealth: Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth)),
-                shieldActive: shieldHealth > 0,
-              }
-            : null,
-        }));
+        set((state) => {
+          if (!state.player) return state;
+          
+          const newShieldHealth = Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth));
+          const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
+          
+          return {
+            ...state,
+            player: {
+              ...state.player,
+              shieldHealth: newShieldHealth,
+              ...shieldFlags,
+            }
+          };
+        });
       },
 
       regenerateShield: (deltaTime: number) => {
         const state = get();
         const now = Date.now();
         
-        if (!state.player || !state.player.shieldActive) return;
+        if (!state.player) return;
         
         const timeSinceLastDamage = now - state.player.lastShieldDamageTime;
         
-        // Only regenerate if enough time has passed since last damage
+        // Allow regeneration even when shield is down to enable recovery gameplay
+        // This is intentional - players can recover from shield depletion
         if (timeSinceLastDamage >= state.player.shieldRegenDelay && 
             state.player.shieldHealth < state.player.maxShieldHealth) {
           const regenAmount = (state.player.shieldRegenRate * deltaTime) / 1000;
@@ -242,7 +259,21 @@ export const useGameStore = create<GameStore>()(
             state.player.shieldHealth + regenAmount
           );
           
-          actions.updatePlayerShield(newShieldHealth);
+          // Update shield health directly to avoid recursive calls
+          set((state) => {
+            if (!state.player) return state;
+            
+            const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
+            
+            return {
+              ...state,
+              player: {
+                ...state.player,
+                shieldHealth: newShieldHealth,
+                ...shieldFlags,
+              }
+            };
+          });
         }
       },
 
@@ -251,14 +282,27 @@ export const useGameStore = create<GameStore>()(
         if (!state.player) return;
         
         const newShieldHealth = Math.max(0, state.player.shieldHealth - damage);
+        const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
         
         set((prevState) => ({
           player: prevState.player
             ? {
                 ...prevState.player,
                 shieldHealth: newShieldHealth,
-                shieldActive: newShieldHealth > 0,
                 lastShieldDamageTime: Date.now(),
+                ...shieldFlags,
+              }
+            : null,
+        }));
+      },
+
+      setShieldDown: (isDown: boolean) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                shieldDown: isDown,
+                shieldActive: state.player.shieldHealth > 0, // Shield is active when it has health
               }
             : null,
         }));

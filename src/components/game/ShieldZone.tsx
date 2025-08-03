@@ -4,6 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Line, Rect, Group, Circle } from "react-konva";
 import { useGameStore } from "@/lib/stores/gameStore";
 
+// Shield visual constants
+const SHIELD_DOWN_BASE_OPACITY = 0.8;
+const SHIELD_PULSE_FREQUENCY = 3;
+const SHIELD_PULSE_AMPLITUDE = 0.3;
+const SHIELD_ACTIVE_BASE_OPACITY = 0.6;
+const SHIELD_INACTIVE_OPACITY = 0.2;
+
 interface ShieldZoneProps {
   width: number;
   height: number;
@@ -30,9 +37,11 @@ export default function ShieldZone({ width, height, shieldHeight }: ShieldZonePr
   const shieldY = height - shieldHeight;
   const shieldActive = player.shieldActive && player.shieldHealth > 0;
   const shieldPercentage = player.shieldHealth / player.maxShieldHealth;
+  const isShieldDown = player.shieldDown;
 
-  // Shield color based on health
+  // Shield color based on health and state
   const getShieldColor = () => {
+    if (isShieldDown) return "#ff0000"; // Red when shield is down
     if (!shieldActive) return "#666666";
     if (shieldPercentage > 0.6) return "#00ffff";
     if (shieldPercentage > 0.3) return "#ffff00";
@@ -42,14 +51,19 @@ export default function ShieldZone({ width, height, shieldHeight }: ShieldZonePr
   const shieldColor = getShieldColor();
   
   // Enhanced shield opacity with pulsing effects
-  const baseOpacity = shieldActive ? 0.6 + (shieldPercentage * 0.4) : 0.2;
-  const pulseIntensity = shieldPercentage < 0.3 ? Math.sin(pulsePhase) * 0.3 : 0;
+  const baseOpacity = isShieldDown 
+    ? SHIELD_DOWN_BASE_OPACITY + Math.sin(pulsePhase * SHIELD_PULSE_FREQUENCY) * SHIELD_PULSE_AMPLITUDE // Intense pulsing when down
+    : shieldActive 
+    ? SHIELD_ACTIVE_BASE_OPACITY + (shieldPercentage * 0.4) 
+    : SHIELD_INACTIVE_OPACITY;
+  const pulseIntensity = (shieldPercentage < 0.3 && !isShieldDown) ? Math.sin(pulsePhase) * 0.3 : 0;
   const shieldOpacity = Math.max(0.1, baseOpacity + pulseIntensity);
 
   // Dynamic warning effects
   const isLowShield = shieldPercentage < 0.25 && shieldPercentage > 0;
   const isCritical = shieldPercentage < 0.1 && shieldPercentage > 0;
-  const warningOpacity = isLowShield ? 0.3 + Math.sin(pulsePhase * 2) * 0.2 : 0.1;
+  const warningOpacity = isShieldDown ? 0.6 + Math.sin(pulsePhase * 4) * 0.4 : // Strong warning when down
+                         isLowShield ? 0.3 + Math.sin(pulsePhase * 2) * 0.2 : 0.1;
   
   // Energy flow effects
   const energyFlow = Math.sin(energyPhase) * 0.5 + 0.5; // 0-1 range
@@ -62,21 +76,23 @@ export default function ShieldZone({ width, height, shieldHeight }: ShieldZonePr
         y={shieldY}
         width={width}
         height={shieldHeight}
-        fill={isLowShield ? "#ff4400" : "#00ffff"}
-        opacity={shieldActive ? warningOpacity : 0.05}
+        fill={isShieldDown ? "#ff0000" : isLowShield ? "#ff4400" : "#00ffff"}
+        opacity={isShieldDown ? warningOpacity : shieldActive ? warningOpacity : 0.05}
       />
 
       {/* Main shield line with enhanced effects */}
       <Line
         points={[0, shieldY, width, shieldY]}
         stroke={shieldColor}
-        strokeWidth={shieldActive ? 4 + (energyFlow * 2) : 2}
+        strokeWidth={isShieldDown ? 6 + Math.sin(pulsePhase * 2) * 2 : // Thick pulsing line when down
+                     shieldActive ? 4 + (energyFlow * 2) : 2}
         opacity={shieldOpacity}
-        dash={shieldActive ? undefined : [10, 10]}
-        shadowEnabled={shieldActive}
+        dash={isShieldDown ? [15, 5] : shieldActive ? undefined : [10, 10]}
+        shadowEnabled={shieldActive || isShieldDown}
         shadowColor={shieldColor}
-        shadowBlur={shieldActive ? 8 + (energyFlow * 6) : 0}
-        shadowOpacity={0.3 + (energyFlow * 0.2)}
+        shadowBlur={isShieldDown ? 12 + Math.sin(pulsePhase) * 8 : // Strong glow when down
+                    shieldActive ? 8 + (energyFlow * 6) : 0}
+        shadowOpacity={isShieldDown ? 0.8 : 0.3 + (energyFlow * 0.2)}
       />
 
       {/* Critical warning pulsing line */}

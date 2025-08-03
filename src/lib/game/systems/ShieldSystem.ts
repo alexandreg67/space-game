@@ -80,8 +80,21 @@ export class ShieldSystem {
     // Create screen effects for visual feedback
     this.createShieldImpactFeedback(severity);
 
-    // Apply shield damage
-    gameState.damageShield(damage);
+    // Cascading protection logic: Shield protects if not down, otherwise direct life loss
+    // Use shieldDown as single source of truth for protection status
+    if (gameState.player && !gameState.player.shieldDown) {
+      // Shield is active - absorb damage as before
+      gameState.damageShield(damage);
+    } else {
+      // Shield is down - enemy breach causes direct life loss
+      const newLives = gameState.lives - 1;
+      gameState.updateLives(newLives);
+      
+      // Check for game over
+      if (newLives <= 0) {
+        gameState.endGame();
+      }
+    }
 
     // Remove the enemy
     this.destroyBreachingEnemy(enemy);
@@ -103,22 +116,11 @@ export class ShieldSystem {
 
   // Handle complete shield depletion
   private handleShieldDepletion(): void {
-    // Shield is depleted - trigger game over or critical state
+    // Shield is depleted - set shield down state instead of immediate game over
+    const gameState = useGameStore.getState();
     
-    // End game when shield is completely destroyed
-    useGameStore.getState().endGame();
-    
-    // Could also just reduce lives instead of immediate game over:
-    // const newLives = gameState.lives - 1;
-    // gameState.updateLives(newLives);
-    // if (newLives <= 0) {
-    //   gameState.endGame();
-    // } else {
-    //   // Reset shield after delay
-    //   setTimeout(() => {
-    //     gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
-    //   }, 3000);
-    // }
+    // Set shield to "down" state - protection is disabled but game continues
+    gameState.setShieldDown(true);
   }
 
   // Destroy enemy that breached shield
