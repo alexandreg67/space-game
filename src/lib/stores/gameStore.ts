@@ -127,7 +127,6 @@ export const useGameStore = create<GameStore>()(
           enemies: [],
           bullets: [],
           powerups: [],
-          backgroundOffset: 0,
           screenEffects: [],
           shieldParticles: [],
           input: { ...defaultInputState, keys: new Set() },
