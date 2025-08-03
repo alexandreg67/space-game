@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Webpack configuration (for when not using Turbopack)
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Prevent canvas dependency issues on client side
@@ -15,6 +16,10 @@ const nextConfig: NextConfig = {
     
     return config;
   },
+  
+  // For Turbopack, the webpack configuration above should not interfere
+  // since Turbopack doesn't use webpack. The dynamic import with ssr: false
+  // in the GameCanvas component should handle SSR issues.
 };
 
 export default nextConfig;
