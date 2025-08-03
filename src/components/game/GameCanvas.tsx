@@ -75,7 +75,7 @@ export default function GameCanvas({
       // Stop music when game is not running
       pauseMusic();
     }
-  }, [isRunning, isPaused, isAudioEnabled]); // Added isAudioEnabled to dependencies
+  }, [isRunning, isPaused, isAudioEnabled, pauseMusic, playMusic]); // Added missing dependencies
 
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -349,7 +349,7 @@ export default function GameCanvas({
         lastShotTimeRef.current = currentTime;
       }
     },
-    [player, isRunning, isPaused, input, width, height, createPlayerBullet]
+    [player, isRunning, isPaused, input, width, height, createPlayerBullet, playLaserSound]
   );
 
   // Game loop

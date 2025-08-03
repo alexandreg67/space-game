@@ -86,7 +86,7 @@ export const useGameAudio = () => {
     }
     console.log('Calling playBackgroundMusic()...');
     playBackgroundMusic(musicId);
-  }, [audioConfig.enableAudio, audioConfig.muted, playBackgroundMusic]);
+  }, [audioConfig, playBackgroundMusic]);
 
   const handleToggleMute = useCallback(() => {
     return toggleMute();
