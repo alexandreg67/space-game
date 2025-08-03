@@ -30,7 +30,8 @@ export default function ScreenEffects({ width, height }: ScreenEffectsProps) {
     if (activeShake) {
       const progress = (currentTime - activeShake.timestamp) / activeShake.duration;
       const intensity = activeShake.intensity * (1 - progress); // Fade out over time
-      const amplitude = config.reducedMotion ? intensity * 2 : intensity * 8; // Reduced amplitude for accessibility
+      // Completely disable shake if reduced motion is enabled for proper accessibility
+      const amplitude = config.reducedMotion ? 0 : intensity * 8;
 
       // Create smooth shake using sine waves at different frequencies
       const time = currentTime * 0.01;

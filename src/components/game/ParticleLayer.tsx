@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Group, Circle, Line } from 'react-konva';
 import { useGameStore } from '@/lib/stores/gameStore';
 
@@ -12,13 +12,16 @@ interface ParticleLayerProps {
 const ParticleLayer: React.FC<ParticleLayerProps> = ({ width, height }) => {
   const shieldParticles = useGameStore((state) => state.shieldParticles || []);
 
-  // Filter only active particles within screen bounds for performance
-  const activeParticles = shieldParticles.filter(particle => 
-    particle.life > 0 && 
-    particle.x >= -50 && 
-    particle.x <= width + 50 &&
-    particle.y >= -50 && 
-    particle.y <= height + 50
+  // Filter only active particles within screen bounds for performance (memoized)
+  const activeParticles = useMemo(
+    () => shieldParticles.filter(particle => 
+      particle.life > 0 && 
+      particle.x >= -50 && 
+      particle.x <= width + 50 &&
+      particle.y >= -50 && 
+      particle.y <= height + 50
+    ),
+    [shieldParticles, width, height]
   );
 
   return (

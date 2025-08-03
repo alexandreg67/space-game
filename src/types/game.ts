@@ -155,7 +155,3 @@ export interface ScreenEffect {
   timestamp: number; // When the effect started
 }
 
-export interface ParticleExtended extends Particle {
-  alpha: number;
-  decay: number;
-}

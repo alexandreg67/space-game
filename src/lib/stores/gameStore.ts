@@ -469,7 +469,7 @@ export const useGameStore = create<GameStore>()(
             .map(particle => {
               const newLife = particle.life - deltaTime;
               // Pre-calculate alpha based on life ratio for better performance
-              const alphaRatio = newLife / particle.maxLife;
+              const alphaRatio = particle.maxLife > 0 ? newLife / particle.maxLife : 0;
               const calculatedAlpha = Math.max(0, alphaRatio);
               
               return {

@@ -237,12 +237,18 @@ export class ShieldSystem {
       timestamp: Date.now()
     });
 
-    // Haptic feedback with user consent check
+    // Haptic feedback with user consent and improved permission handling
     if (gameState.config.enableHapticFeedback && 
         typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       const vibrationPattern = severity > 0.7 ? [50, 50, 100] : [30]; // Long pattern for severe hits
+      
+      // Modern browsers may require user gesture for vibration API
       try {
-        navigator.vibrate(vibrationPattern);
+        const result = navigator.vibrate(vibrationPattern);
+        // Some browsers return false if vibration failed
+        if (!result && process.env.NODE_ENV === 'development') {
+          console.debug('Haptic feedback may require user gesture or permission');
+        }
       } catch (error) {
         // Silently fail if haptic feedback is not available or blocked
         if (process.env.NODE_ENV === 'development') {
