@@ -80,8 +80,8 @@ export class ShieldSystem {
     // Create screen effects for visual feedback
     this.createShieldImpactFeedback(severity);
 
-    // Cascading protection logic: Shield protects if active, otherwise direct life loss
-    if (gameState.player && !gameState.player.shieldDown && gameState.player.shieldHealth > 0) {
+    // Cascading protection logic: Shield protects if not down, otherwise direct life loss
+    if (gameState.player && !gameState.player.shieldDown) {
       // Shield is active - absorb damage as before
       gameState.damageShield(damage);
     } else {

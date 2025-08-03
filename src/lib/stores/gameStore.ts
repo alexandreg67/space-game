@@ -216,16 +216,27 @@ export const useGameStore = create<GameStore>()(
       },
 
       updatePlayerShield: (shieldHealth: number) => {
-        set((state) => ({
-          player: state.player
-            ? {
-                ...state.player,
-                shieldHealth: Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth)),
-                shieldActive: shieldHealth > 0,
-                shieldDown: shieldHealth <= 0, // Shield is down when health reaches 0
-              }
-            : null,
-        }));
+        set((state) => {
+          if (!state.player) return state;
+          
+          const newShieldHealth = Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth));
+          
+          return {
+            ...state,
+            player: {
+              ...state.player,
+              shieldHealth: newShieldHealth,
+              shieldActive: newShieldHealth > 0,
+            }
+          };
+        });
+        
+        // Use consistent shield down state management
+        const currentState = get();
+        if (currentState.player) {
+          const { setShieldDown } = get();
+          setShieldDown(currentState.player.shieldHealth <= 0);
+        }
       },
 
       regenerateShield: (deltaTime: number) => {
@@ -257,7 +268,7 @@ export const useGameStore = create<GameStore>()(
               } : null,
             }));
           } else {
-            actions.updatePlayerShield(newShieldHealth);
+            get().updatePlayerShield(newShieldHealth);
           }
         }
       },
