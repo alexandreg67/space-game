@@ -12,22 +12,25 @@ interface ScreenEffectsProps {
 
 export default function ScreenEffects({ width, height }: ScreenEffectsProps) {
   const screenEffects = useGameStore((state) => state.screenEffects);
+  const config = useGameStore((state) => state.config);
   
   // Calculate screen effects in real-time during render (no state updates)
   const { shakeOffset, activeFlash, currentTime } = useMemo(() => {
     const currentTime = Date.now();
     
-    // Calculate camera shake offset
-    const activeShake = screenEffects.find(
-      (effect) => effect.type === 'shake' && 
-      currentTime - effect.timestamp < effect.duration
-    );
+    // Calculate camera shake offset (respect accessibility settings)
+    const activeShake = config.enableScreenEffects && !config.reducedMotion 
+      ? screenEffects.find(
+          (effect) => effect.type === 'shake' && 
+          currentTime - effect.timestamp < effect.duration
+        ) 
+      : null;
 
     let shakeOffset = { x: 0, y: 0 };
     if (activeShake) {
       const progress = (currentTime - activeShake.timestamp) / activeShake.duration;
       const intensity = activeShake.intensity * (1 - progress); // Fade out over time
-      const amplitude = intensity * 8; // Max 8px shake
+      const amplitude = config.reducedMotion ? intensity * 2 : intensity * 8; // Reduced amplitude for accessibility
 
       // Create smooth shake using sine waves at different frequencies
       const time = currentTime * 0.01;
@@ -37,14 +40,16 @@ export default function ScreenEffects({ width, height }: ScreenEffectsProps) {
       shakeOffset = { x: shakeX, y: shakeY };
     }
 
-    // Get current flash effect
-    const activeFlash = screenEffects.find(
-      (effect) => effect.type === 'flash' && 
-      currentTime - effect.timestamp < effect.duration
-    );
+    // Get current flash effect (respect accessibility settings)
+    const activeFlash = config.enableScreenFlash 
+      ? screenEffects.find(
+          (effect) => effect.type === 'flash' && 
+          currentTime - effect.timestamp < effect.duration
+        )
+      : null;
 
     return { shakeOffset, activeFlash, currentTime };
-  }, [screenEffects]);
+  }, [screenEffects, config.enableScreenEffects, config.enableScreenFlash, config.reducedMotion]);
 
   return (
     <Group x={shakeOffset.x} y={shakeOffset.y}>
@@ -55,6 +60,7 @@ export default function ScreenEffects({ width, height }: ScreenEffectsProps) {
           height={height}
           effect={activeFlash}
           currentTime={currentTime}
+          maxIntensity={config.flashIntensityLimit}
         />
       )}
     </Group>
@@ -66,9 +72,10 @@ interface FlashEffectProps {
   height: number;
   effect: ScreenEffect;
   currentTime: number;
+  maxIntensity: number;
 }
 
-function FlashEffect({ width, height, effect, currentTime }: FlashEffectProps) {
+function FlashEffect({ width, height, effect, currentTime, maxIntensity }: FlashEffectProps) {
   const progress = (currentTime - effect.timestamp) / effect.duration;
   
   // Flash intensity peaks quickly then fades
@@ -82,8 +89,8 @@ function FlashEffect({ width, height, effect, currentTime }: FlashEffectProps) {
     flashIntensity = effect.intensity * Math.pow(1 - decayProgress, 2);
   }
 
-  // Cap opacity for accessibility
-  const opacity = Math.min(flashIntensity, 0.6);
+  // Cap opacity for accessibility based on user settings
+  const opacity = Math.min(flashIntensity, maxIntensity);
 
   if (opacity <= 0.01) return null;
 

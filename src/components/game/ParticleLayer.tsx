@@ -25,8 +25,8 @@ const ParticleLayer: React.FC<ParticleLayerProps> = ({ width, height }) => {
     <Group>
       {/* Render shield particles */}
       {activeParticles.map((particle) => {
-        // Calculate alpha based on remaining life
-        const alpha = Math.max(0, Math.min(1, particle.life / particle.maxLife));
+        // Use pre-calculated alpha for better performance
+        const alpha = particle.alpha || 1;
         
         // Choose rendering method based on particle type
         switch (particle.type) {

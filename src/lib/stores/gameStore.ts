@@ -86,6 +86,9 @@ interface GameStore extends GameState {
   addShieldParticles: (particles: Particle[]) => void;
   updateShieldParticles: (deltaTime: number) => void;
   clearShieldParticles: () => void;
+
+  // Accessibility settings
+  updateAccessibilitySettings: (settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>) => void;
 }
 
 const defaultConfig: GameConfig = {
@@ -104,6 +107,11 @@ const defaultConfig: GameConfig = {
   shieldMaxHealth: 100, // Maximum shield health
   // Visual effects settings
   enableScreenEffects: true, // Enable screen flash and shake effects
+  // Accessibility settings
+  enableHapticFeedback: true, // Enable haptic feedback (requires user consent)
+  enableScreenFlash: true, // Enable screen flash effects
+  reducedMotion: false, // Reduce motion for accessibility
+  flashIntensityLimit: 0.6, // Maximum flash opacity (0.6 = 60% for accessibility)
 };
 
 const defaultInputState: InputState = {
@@ -454,16 +462,22 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateShieldParticles: (deltaTime: number) => {
+        const deltaSeconds = deltaTime / 1000;
+        
         set((state) => ({
           shieldParticles: state.shieldParticles
             .map(particle => {
               const newLife = particle.life - deltaTime;
+              // Pre-calculate alpha based on life ratio for better performance
+              const alphaRatio = newLife / particle.maxLife;
+              const calculatedAlpha = Math.max(0, alphaRatio);
+              
               return {
                 ...particle,
-                x: particle.x + particle.vx * (deltaTime / 1000),
-                y: particle.y + particle.vy * (deltaTime / 1000),
+                x: particle.x + particle.vx * deltaSeconds,
+                y: particle.y + particle.vy * deltaSeconds,
                 life: newLife,
-                alpha: Math.max(0, newLife / particle.maxLife)
+                alpha: calculatedAlpha
               };
             })
             .filter(particle => particle.life > 0)
@@ -472,6 +486,13 @@ export const useGameStore = create<GameStore>()(
 
       clearShieldParticles: () => {
         set({ shieldParticles: [] });
+      },
+
+      // Accessibility settings management
+      updateAccessibilitySettings: (settings) => {
+        set((state) => ({
+          config: { ...state.config, ...settings }
+        }));
       },
     };
 

@@ -26,6 +26,11 @@ export interface GameConfig {
   shieldMaxHealth: number;
   // Visual effects settings
   enableScreenEffects: boolean;
+  // Accessibility settings
+  enableHapticFeedback: boolean;
+  enableScreenFlash: boolean;
+  reducedMotion: boolean;
+  flashIntensityLimit: number; // 0-1, maximum flash opacity for accessibility
 }
 
 export interface GameState {
