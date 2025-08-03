@@ -12,6 +12,9 @@ import type {
   ScreenEffect,
 } from "@/types/game";
 import type { Particle } from "@/lib/game/utils/objectPool";
+import type { AudioConfig, SoundId, PlaySoundOptions } from "@/lib/audio/audioConfig";
+import { audioManager } from "@/lib/audio/AudioManager";
+import { DEFAULT_AUDIO_CONFIG } from "@/lib/audio/audioConfig";
 
 // Helper function to calculate shield status flags based on health
 function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
@@ -33,6 +36,9 @@ interface GameStore extends GameState {
 
   // Game config
   config: GameConfig;
+
+  // Audio config
+  audioConfig: AudioConfig;
 
   // Background scroll
   backgroundOffset: number;
@@ -98,6 +104,15 @@ interface GameStore extends GameState {
 
   // Accessibility settings
   updateAccessibilitySettings: (settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>) => void;
+
+  // Audio actions
+  initializeAudio: () => Promise<boolean>;
+  updateAudioConfig: (config: Partial<AudioConfig>) => void;
+  toggleMute: () => boolean;
+  playGameSound: (soundId: SoundId, options?: PlaySoundOptions) => void;
+  playBackgroundMusic: (musicId: string) => void;
+  pauseMusic: () => void;
+  resumeMusic: () => void;
 }
 
 const defaultConfig: GameConfig = {
@@ -357,6 +372,14 @@ export const useGameStore = create<GameStore>()(
           // Calculate new level based on score (level up every 1000 points)
           const newLevel = Math.floor(newScore / 1000) + 1;
           
+          // Play level up sound if level increased
+          if (newLevel > state.level) {
+            // Use a small delay to ensure the level update is processed first
+            setTimeout(() => {
+              get().playGameSound('level_up', { volume: 0.8 });
+            }, 50);
+          }
+          
           return {
             score: newScore,
             level: newLevel,
@@ -540,6 +563,69 @@ export const useGameStore = create<GameStore>()(
           config: { ...state.config, ...settings }
         }));
       },
+
+      // Audio management
+      initializeAudio: async (): Promise<boolean> => {
+        try {
+          const success = await audioManager.initialize();
+          if (success) {
+            set((state) => ({
+              audioConfig: { ...state.audioConfig, enableAudio: true }
+            }));
+          }
+          return success;
+        } catch (error) {
+          console.warn('Failed to initialize audio:', error);
+          return false;
+        }
+      },
+
+      updateAudioConfig: (config: Partial<AudioConfig>) => {
+        set((state) => {
+          const newConfig = { ...state.audioConfig, ...config };
+          audioManager.updateConfig(newConfig);
+          return { audioConfig: newConfig };
+        });
+      },
+
+      toggleMute: (): boolean => {
+        const muted = audioManager.toggleMute();
+        set((state) => ({
+          audioConfig: { ...state.audioConfig, muted }
+        }));
+        return muted;
+      },
+
+      playGameSound: (soundId: SoundId, options?: PlaySoundOptions) => {
+        const state = get();
+        if (state.audioConfig.enableAudio && !state.audioConfig.muted) {
+          audioManager.playSound(soundId, options);
+        }
+      },
+
+      playBackgroundMusic: (musicId: string) => {
+        const state = get();
+        console.log('gameStore.playBackgroundMusic() called', {
+          musicId,
+          enableAudio: state.audioConfig.enableAudio,
+          muted: state.audioConfig.muted,
+          audioConfig: state.audioConfig
+        });
+        if (state.audioConfig.enableAudio && !state.audioConfig.muted) {
+          console.log('Calling audioManager.playMusic()...');
+          audioManager.playMusic(musicId as any);
+        } else {
+          console.log('Music blocked by gameStore conditions');
+        }
+      },
+
+      pauseMusic: () => {
+        audioManager.pauseMusic();
+      },
+
+      resumeMusic: () => {
+        audioManager.resumeMusic();
+      },
     };
 
     return {
@@ -558,6 +644,7 @@ export const useGameStore = create<GameStore>()(
 
       input: defaultInputState,
       config: defaultConfig,
+      audioConfig: DEFAULT_AUDIO_CONFIG,
       backgroundOffset: 0,
       screenEffects: [],
       shieldParticles: [],
@@ -583,6 +670,7 @@ export const useGameState = () => {
 };
 export const useInput = () => useGameStore((state) => state.input);
 export const useGameTime = () => useGameStore((state) => state.gameTime);
+export const useAudioConfig = () => useGameStore((state) => state.audioConfig);
 
 // Stable action selectors to prevent re-renders
 export const useGameActions = () =>
@@ -615,4 +703,11 @@ export const useGameActions = () =>
     removeKey: state.removeKey,
     updateMouse: state.updateMouse,
     updateTouch: state.updateTouch,
+    initializeAudio: state.initializeAudio,
+    updateAudioConfig: state.updateAudioConfig,
+    toggleMute: state.toggleMute,
+    playGameSound: state.playGameSound,
+    playBackgroundMusic: state.playBackgroundMusic,
+    pauseMusic: state.pauseMusic,
+    resumeMusic: state.resumeMusic,
   }));

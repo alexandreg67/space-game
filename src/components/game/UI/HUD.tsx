@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { Text, Rect, Group } from "react-konva";
 import { useGameStore } from "@/lib/stores/gameStore";
 import type { PlayerEntity } from "@/types/game";
+import AudioControls from "./AudioControls";
 
 // Helper function to determine shield status
 function getShieldStatus(player: PlayerEntity): 'down' | 'recharging' | 'active' | 'full' {
@@ -94,6 +95,13 @@ export default function HUD({ width, height }: HUDProps) {
         fontFamily="Arial"
         fill="#ffffff"
         fontStyle="bold"
+      />
+
+      {/* Audio Controls */}
+      <AudioControls
+        x={width - 25}
+        y={20}
+        size={20}
       />
 
       {/* Shield Bar (using the original health bar position) */}

@@ -6,10 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audio:placeholder": "node scripts/create-placeholder-audio.js"
   },
   "dependencies": {
+    "@types/howler": "^2.2.12",
     "framer-motion": "^12.23.12",
+    "howler": "^2.2.4",
     "konva": "^9.3.22",
     "next": "15.4.5",
     "react": "19.1.0",

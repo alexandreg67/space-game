@@ -19,6 +19,7 @@ import ShieldZone from "./ShieldZone";
 import ScreenEffects from "./effects/ScreenEffects";
 import ParticleLayer from "./ParticleLayer";
 import HUD from "./UI/HUD";
+import { useGameAudio } from "@/hooks/useGameAudio";
 
 interface GameCanvasProps {
   width?: number;
@@ -40,6 +41,9 @@ export default function GameCanvas({
   
   // Track pool initialization state to prevent timing issues
   const [poolsInitialized, setPoolsInitialized] = useState(false);
+
+  // Audio system
+  const { playLaserSound, playMusic, pauseMusic, initializeAudio, isAudioEnabled } = useGameAudio();
   
 
   // Initialize game when component mounts (stable reference to avoid re-renders)
@@ -48,6 +52,30 @@ export default function GameCanvas({
     setPoolsInitialized(true);
     useGameStore.getState().initializeGame();
   }, []); // Empty dependency array to run only once
+
+  // Background music management
+  useEffect(() => {
+    if (isRunning && !isPaused) {
+      // Start background music when game starts
+      console.log('Attempting to start background music...', { isAudioEnabled });
+      playMusic('space_ambient');
+      
+      // If audio isn't enabled yet, retry after a short delay
+      if (!isAudioEnabled) {
+        console.log('Audio not enabled yet, will retry music in 500ms...');
+        setTimeout(() => {
+          console.log('Retrying background music...', { isAudioEnabled });
+          playMusic('space_ambient');
+        }, 500);
+      }
+    } else if (isPaused) {
+      // Pause music when game is paused
+      pauseMusic();
+    } else if (!isRunning) {
+      // Stop music when game is not running
+      pauseMusic();
+    }
+  }, [isRunning, isPaused, isAudioEnabled, pauseMusic, playMusic]); // Added missing dependencies
 
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -164,11 +192,22 @@ export default function GameCanvas({
 
 
   // Handle starting the game
-  const handleStartGame = useCallback(() => {
+  const handleStartGame = useCallback(async () => {
     if (!isRunning) {
+      // Initialize audio when user starts playing (user interaction detected)
+      if (!isAudioEnabled) {
+        console.log('Initializing audio system when game starts...');
+        try {
+          await initializeAudio();
+          console.log('Audio initialized successfully on game start');
+        } catch (error) {
+          console.warn('Failed to initialize audio on game start:', error);
+        }
+      }
+      
       useGameStore.getState().startGame();
     }
-  }, [isRunning]);
+  }, [isRunning, isAudioEnabled, initializeAudio]);
 
   // Listen for space key to start game
   useEffect(() => {
@@ -306,10 +345,11 @@ export default function GameCanvas({
           player.position.y - player.size.y / 2
         );
         addBullet(bullet);
+        playLaserSound({ volume: 0.6 });
         lastShotTimeRef.current = currentTime;
       }
     },
-    [player, isRunning, isPaused, input, width, height, createPlayerBullet]
+    [player, isRunning, isPaused, input, width, height, createPlayerBullet, playLaserSound]
   );
 
   // Game loop
@@ -445,7 +485,7 @@ export default function GameCanvas({
 
 
         {/* UI Layer */}
-        <Layer name="ui" listening={false}>
+        <Layer name="ui">
           <HUD width={width} height={height} />
         </Layer>
 
