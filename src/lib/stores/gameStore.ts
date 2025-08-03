@@ -129,6 +129,7 @@ export const useGameStore = create<GameStore>()(
           powerups: [],
           backgroundOffset: 0,
           screenEffects: [],
+          shieldParticles: [],
           input: { ...defaultInputState, keys: new Set() },
         });
         actions.createPlayer();
@@ -456,13 +457,16 @@ export const useGameStore = create<GameStore>()(
       updateShieldParticles: (deltaTime: number) => {
         set((state) => ({
           shieldParticles: state.shieldParticles
-            .map(particle => ({
-              ...particle,
-              x: particle.x + particle.vx * (deltaTime / 1000),
-              y: particle.y + particle.vy * (deltaTime / 1000),
-              life: particle.life - deltaTime,
-              alpha: Math.max(0, particle.life / particle.maxLife)
-            }))
+            .map(particle => {
+              const newLife = particle.life - deltaTime;
+              return {
+                ...particle,
+                x: particle.x + particle.vx * (deltaTime / 1000),
+                y: particle.y + particle.vy * (deltaTime / 1000),
+                life: newLife,
+                alpha: Math.max(0, newLife / particle.maxLife)
+              };
+            })
             .filter(particle => particle.life > 0)
         }));
       },

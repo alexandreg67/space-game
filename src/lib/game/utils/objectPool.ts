@@ -191,7 +191,7 @@ export interface Particle {
   size: number;
   alpha: number;
   decay: number;
-  type?: 'default' | 'shield_impact' | 'shield_spark' | 'shield_ripple' | 'explosion';
+  type?: 'default' | 'shield_impact' | 'shield_spark' | 'shield_ripple' | 'explosion' | 'dust' | 'streak' | 'spark';
 }
 
 // Fallback particle creation function

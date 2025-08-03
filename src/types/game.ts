@@ -142,6 +142,7 @@ export interface ShieldZone {
 }
 
 export interface ScreenEffect {
+  id?: string; // Optional unique identifier
   type: 'flash' | 'shake';
   color?: string; // For flash effects
   intensity: number; // 0-1 for flash opacity, 0-1 for shake amplitude

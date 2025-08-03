@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Group, Rect } from "react-konva";
 import { useGameStore } from "@/lib/stores/gameStore";
+import type { ScreenEffect } from "@/types/game";
 
 interface ScreenEffectsProps {
   width: number;
@@ -63,7 +64,7 @@ export default function ScreenEffects({ width, height }: ScreenEffectsProps) {
 interface FlashEffectProps {
   width: number;
   height: number;
-  effect: any; // ScreenEffect
+  effect: ScreenEffect;
   currentTime: number;
 }
 
