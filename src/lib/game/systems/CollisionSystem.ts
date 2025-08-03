@@ -125,6 +125,9 @@ export class CollisionSystem {
       const shieldDamage = Math.min(bullet.damage, player.shieldHealth);
       const excessDamage = bullet.damage - shieldDamage;
       
+      // Play shield hit sound
+      gameState.playGameSound('shield_hit', { volume: 0.7 });
+      
       gameState.damageShield(shieldDamage);
       
       // Create shield impact effect with intensity
@@ -134,6 +137,9 @@ export class CollisionSystem {
       if (excessDamage > 0) {
         const newHealth = player.health - excessDamage;
         gameState.updatePlayerHealth(newHealth);
+        
+        // Play player hit sound
+        gameState.playGameSound('player_hit', { volume: 0.9 });
         
         // Create additional impact effect for health damage with higher intensity
         this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400', intensity * 1.2);
@@ -147,6 +153,9 @@ export class CollisionSystem {
       // No shield protection - damage player directly
       const newHealth = player.health - bullet.damage;
       gameState.updatePlayerHealth(newHealth);
+      
+      // Play player hit sound
+      gameState.playGameSound('player_hit', { volume: 0.9 });
       
       // Create intense impact effect for unshielded hit
       this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400', intensity * 1.5);
@@ -234,6 +243,9 @@ export class CollisionSystem {
     // Award points
     gameState.updateScore(points);
     
+    // Play explosion sound
+    gameState.playGameSound('explosion', { volume: 0.8 });
+    
     // Create explosion effect
     this.createExplosionEffect(enemy.position.x, enemy.position.y);
     
@@ -262,6 +274,8 @@ export class CollisionSystem {
     
     // Check game over
     if (newLives <= 0) {
+      // Play game over sound
+      gameState.playGameSound('game_over', { volume: 1.0 });
       gameState.endGame();
     } else {
       // Respawn player after delay

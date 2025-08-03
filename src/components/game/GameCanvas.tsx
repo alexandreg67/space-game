@@ -19,6 +19,7 @@ import ShieldZone from "./ShieldZone";
 import ScreenEffects from "./effects/ScreenEffects";
 import ParticleLayer from "./ParticleLayer";
 import HUD from "./UI/HUD";
+import { useGameAudio } from "@/hooks/useGameAudio";
 
 interface GameCanvasProps {
   width?: number;
@@ -40,6 +41,9 @@ export default function GameCanvas({
   
   // Track pool initialization state to prevent timing issues
   const [poolsInitialized, setPoolsInitialized] = useState(false);
+
+  // Audio system
+  const { playLaserSound, playMusic, pauseMusic } = useGameAudio();
   
 
   // Initialize game when component mounts (stable reference to avoid re-renders)
@@ -48,6 +52,20 @@ export default function GameCanvas({
     setPoolsInitialized(true);
     useGameStore.getState().initializeGame();
   }, []); // Empty dependency array to run only once
+
+  // Background music management
+  useEffect(() => {
+    if (isRunning && !isPaused) {
+      // Start background music when game starts
+      playMusic('space_ambient');
+    } else if (isPaused) {
+      // Pause music when game is paused
+      pauseMusic();
+    } else if (!isRunning) {
+      // Stop music when game is not running
+      pauseMusic();
+    }
+  }, [isRunning, isPaused]); // Removed audio functions from dependencies
 
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -306,6 +324,7 @@ export default function GameCanvas({
           player.position.y - player.size.y / 2
         );
         addBullet(bullet);
+        playLaserSound({ volume: 0.6 });
         lastShotTimeRef.current = currentTime;
       }
     },
@@ -445,7 +464,7 @@ export default function GameCanvas({
 
 
         {/* UI Layer */}
-        <Layer name="ui" listening={false}>
+        <Layer name="ui">
           <HUD width={width} height={height} />
         </Layer>
 

@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# audio placeholders (development only)
+# Real audio files should be added manually
+/public/sounds/**/*.mp3
+/public/sounds/**/*.wav
+/public/sounds/**/*.ogg
+!/public/sounds/README.md
+!/public/sounds/**/.gitkeep
