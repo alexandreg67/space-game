@@ -605,8 +605,17 @@ export const useGameStore = create<GameStore>()(
 
       playBackgroundMusic: (musicId: string) => {
         const state = get();
+        console.log('gameStore.playBackgroundMusic() called', {
+          musicId,
+          enableAudio: state.audioConfig.enableAudio,
+          muted: state.audioConfig.muted,
+          audioConfig: state.audioConfig
+        });
         if (state.audioConfig.enableAudio && !state.audioConfig.muted) {
+          console.log('Calling audioManager.playMusic()...');
           audioManager.playMusic(musicId as any);
+        } else {
+          console.log('Music blocked by gameStore conditions');
         }
       },
 

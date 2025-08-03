@@ -74,7 +74,17 @@ export const useGameAudio = () => {
 
   // Music control functions
   const playMusic = useCallback((musicId: string) => {
-    if (!audioConfig.enableAudio || audioConfig.muted) return;
+    console.log('useGameAudio.playMusic() called', {
+      musicId,
+      enableAudio: audioConfig.enableAudio,
+      muted: audioConfig.muted,
+      audioConfig
+    });
+    if (!audioConfig.enableAudio || audioConfig.muted) {
+      console.log('Music blocked by useGameAudio conditions');
+      return;
+    }
+    console.log('Calling playBackgroundMusic()...');
     playBackgroundMusic(musicId);
   }, [audioConfig.enableAudio, audioConfig.muted, playBackgroundMusic]);
 

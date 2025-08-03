@@ -201,30 +201,55 @@ class AudioManager {
    * Play background music
    */
   async playMusic(id: MusicId, options: PlaySoundOptions = {}): Promise<void> {
+    console.log(`AudioManager.playMusic() called with id: ${id}`, {
+      enableAudio: this.config.enableAudio,
+      muted: this.config.muted,
+      musicVolume: this.config.musicVolume,
+      masterVolume: this.config.masterVolume,
+      options
+    });
+
     if (!this.config.enableAudio || this.config.muted) {
+      console.log('Music playback blocked - audio disabled or muted');
       return;
     }
 
     // Stop current music
     if (this.music) {
+      console.log('Stopping current music');
       this.music.stop();
       this.music = null;
     }
 
     try {
       const musicSrc = `/sounds/music/${id}.wav`;
+      console.log(`Creating Howl for music: ${musicSrc}`);
       
       this.music = new Howl({
         src: [musicSrc],
         volume: this.config.musicVolume * this.config.masterVolume,
         loop: options.loop ?? true,
         onload: () => {
+          console.log(`Music ${id} loaded successfully, attempting to play...`);
           if (this.music && this.config.enableAudio && !this.config.muted) {
-            this.music.play();
+            const playId = this.music.play();
+            console.log(`Music ${id} play() called, playId:`, playId);
+          } else {
+            console.log('Music not played - conditions not met', {
+              musicExists: !!this.music,
+              enableAudio: this.config.enableAudio,
+              muted: this.config.muted
+            });
           }
         },
-        onloaderror: () => {
-          console.warn(`Failed to load music: ${id}`);
+        onloaderror: (id, error) => {
+          console.warn(`Failed to load music: ${id}`, error);
+        },
+        onplay: () => {
+          console.log(`Music ${id} started playing`);
+        },
+        onplayerror: (id, error) => {
+          console.warn(`Music ${id} play error:`, error);
         },
       });
     } catch (error) {

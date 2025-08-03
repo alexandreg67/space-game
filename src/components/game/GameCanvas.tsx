@@ -43,7 +43,7 @@ export default function GameCanvas({
   const [poolsInitialized, setPoolsInitialized] = useState(false);
 
   // Audio system
-  const { playLaserSound, playMusic, pauseMusic } = useGameAudio();
+  const { playLaserSound, playMusic, pauseMusic, initializeAudio, isAudioEnabled } = useGameAudio();
   
 
   // Initialize game when component mounts (stable reference to avoid re-renders)
@@ -57,7 +57,17 @@ export default function GameCanvas({
   useEffect(() => {
     if (isRunning && !isPaused) {
       // Start background music when game starts
+      console.log('Attempting to start background music...', { isAudioEnabled });
       playMusic('space_ambient');
+      
+      // If audio isn't enabled yet, retry after a short delay
+      if (!isAudioEnabled) {
+        console.log('Audio not enabled yet, will retry music in 500ms...');
+        setTimeout(() => {
+          console.log('Retrying background music...', { isAudioEnabled });
+          playMusic('space_ambient');
+        }, 500);
+      }
     } else if (isPaused) {
       // Pause music when game is paused
       pauseMusic();
@@ -65,7 +75,7 @@ export default function GameCanvas({
       // Stop music when game is not running
       pauseMusic();
     }
-  }, [isRunning, isPaused]); // Removed audio functions from dependencies
+  }, [isRunning, isPaused, isAudioEnabled]); // Added isAudioEnabled to dependencies
 
   // Input handlers
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -182,11 +192,22 @@ export default function GameCanvas({
 
 
   // Handle starting the game
-  const handleStartGame = useCallback(() => {
+  const handleStartGame = useCallback(async () => {
     if (!isRunning) {
+      // Initialize audio when user starts playing (user interaction detected)
+      if (!isAudioEnabled) {
+        console.log('Initializing audio system when game starts...');
+        try {
+          await initializeAudio();
+          console.log('Audio initialized successfully on game start');
+        } catch (error) {
+          console.warn('Failed to initialize audio on game start:', error);
+        }
+      }
+      
       useGameStore.getState().startGame();
     }
-  }, [isRunning]);
+  }, [isRunning, isAudioEnabled, initializeAudio]);
 
   // Listen for space key to start game
   useEffect(() => {
