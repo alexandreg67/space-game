@@ -68,6 +68,7 @@ export interface PlayerEntity extends EntityType {
   shieldRegenDelay: number;
   lastShieldDamageTime: number;
   shieldActive: boolean;
+  shieldDown: boolean; // True when shield is depleted and protection is disabled
 }
 
 export interface EnemyEntity extends EntityType {

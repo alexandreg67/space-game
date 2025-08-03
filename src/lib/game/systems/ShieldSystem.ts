@@ -80,8 +80,22 @@ export class ShieldSystem {
     // Create screen effects for visual feedback
     this.createShieldImpactFeedback(severity);
 
-    // Apply shield damage
-    gameState.damageShield(damage);
+    // Cascading protection logic: Shield protects if active, otherwise direct life loss
+    if (gameState.player && !gameState.player.shieldDown && gameState.player.shieldHealth > 0) {
+      // Shield is active - absorb damage as before
+      gameState.damageShield(damage);
+      console.log(`Shield absorbed ${damage} damage. Shield health: ${gameState.player.shieldHealth - damage}`);
+    } else {
+      // Shield is down - enemy breach causes direct life loss
+      const newLives = gameState.lives - 1;
+      gameState.updateLives(newLives);
+      console.log(`Shield down! Enemy breach caused life loss. Lives remaining: ${newLives}`);
+      
+      // Check for game over
+      if (newLives <= 0) {
+        gameState.endGame();
+      }
+    }
 
     // Remove the enemy
     this.destroyBreachingEnemy(enemy);
@@ -103,22 +117,13 @@ export class ShieldSystem {
 
   // Handle complete shield depletion
   private handleShieldDepletion(): void {
-    // Shield is depleted - trigger game over or critical state
+    // Shield is depleted - set shield down state instead of immediate game over
+    const gameState = useGameStore.getState();
     
-    // End game when shield is completely destroyed
-    useGameStore.getState().endGame();
+    // Set shield to "down" state - protection is disabled but game continues
+    gameState.setShieldDown(true);
     
-    // Could also just reduce lives instead of immediate game over:
-    // const newLives = gameState.lives - 1;
-    // gameState.updateLives(newLives);
-    // if (newLives <= 0) {
-    //   gameState.endGame();
-    // } else {
-    //   // Reset shield after delay
-    //   setTimeout(() => {
-    //     gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
-    //   }, 3000);
-    // }
+    console.log('Shield depleted - protection disabled. Next enemy breach will cause life loss.');
   }
 
   // Destroy enemy that breached shield

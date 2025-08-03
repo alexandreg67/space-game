@@ -134,16 +134,29 @@ export default function HUD({ width, height }: HUDProps) {
             fill="#00ffff"
           />
 
-          {/* Shield status indicator */}
-          {player.shieldHealth <= 0 && (
+          {/* Shield status indicator with enhanced warning for shield down */}
+          {player.shieldDown && (
             <Text
               x={360}
               y={height - 40}
-              text="SHIELD DOWN!"
-              fontSize={12}
+              text="⚠ SHIELD DOWN! ⚠"
+              fontSize={14}
               fontFamily="Arial"
               fill="#ff0000"
               fontStyle="bold"
+            />
+          )}
+          
+          {/* Shield regenerating indicator */}
+          {!player.shieldDown && player.shieldHealth < player.maxShieldHealth && player.shieldHealth > 0 && (
+            <Text
+              x={360}
+              y={height - 40}
+              text="RECHARGING..."
+              fontSize={10}
+              fontFamily="Arial"
+              fill="#ffff00"
+              fontStyle="italic"
             />
           )}
         </Group>

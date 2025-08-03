@@ -50,6 +50,7 @@ interface GameStore extends GameState {
   updatePlayerShield: (shieldHealth: number) => void;
   regenerateShield: (deltaTime: number) => void;
   damageShield: (damage: number) => void;
+  setShieldDown: (isDown: boolean) => void;
 
   // Entity management
   addEnemy: (enemy: EnemyEntity) => void;
@@ -187,6 +188,7 @@ export const useGameStore = create<GameStore>()(
           shieldRegenDelay: config.shieldRegenDelay,
           lastShieldDamageTime: 0,
           shieldActive: true,
+          shieldDown: false,
         };
         set({ player });
       },
@@ -220,6 +222,7 @@ export const useGameStore = create<GameStore>()(
                 ...state.player,
                 shieldHealth: Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth)),
                 shieldActive: shieldHealth > 0,
+                shieldDown: shieldHealth <= 0 && state.player.shieldDown, // Maintain shieldDown state when health is 0
               }
             : null,
         }));
@@ -229,11 +232,11 @@ export const useGameStore = create<GameStore>()(
         const state = get();
         const now = Date.now();
         
-        if (!state.player || !state.player.shieldActive) return;
+        if (!state.player) return;
         
         const timeSinceLastDamage = now - state.player.lastShieldDamageTime;
         
-        // Only regenerate if enough time has passed since last damage
+        // Allow regeneration even when shield is down, but respect the delay
         if (timeSinceLastDamage >= state.player.shieldRegenDelay && 
             state.player.shieldHealth < state.player.maxShieldHealth) {
           const regenAmount = (state.player.shieldRegenRate * deltaTime) / 1000;
@@ -242,7 +245,19 @@ export const useGameStore = create<GameStore>()(
             state.player.shieldHealth + regenAmount
           );
           
-          actions.updatePlayerShield(newShieldHealth);
+          // If shield was down and we're regenerating, bring it back online
+          if (state.player.shieldDown && newShieldHealth > 0) {
+            set((state) => ({
+              player: state.player ? {
+                ...state.player,
+                shieldHealth: newShieldHealth,
+                shieldActive: true,
+                shieldDown: false, // Shield is back online
+              } : null,
+            }));
+          } else {
+            actions.updatePlayerShield(newShieldHealth);
+          }
         }
       },
 
@@ -259,6 +274,18 @@ export const useGameStore = create<GameStore>()(
                 shieldHealth: newShieldHealth,
                 shieldActive: newShieldHealth > 0,
                 lastShieldDamageTime: Date.now(),
+              }
+            : null,
+        }));
+      },
+
+      setShieldDown: (isDown: boolean) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                shieldDown: isDown,
+                shieldActive: !isDown && state.player.shieldHealth > 0,
               }
             : null,
         }));
