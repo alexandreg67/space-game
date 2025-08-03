@@ -489,7 +489,9 @@ export const useGameStore = create<GameStore>()(
       },
 
       // Accessibility settings management
-      updateAccessibilitySettings: (settings) => {
+      updateAccessibilitySettings: (
+        settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>
+      ) => {
         set((state) => ({
           config: { ...state.config, ...settings }
         }));
