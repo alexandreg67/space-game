@@ -227,16 +227,10 @@ export const useGameStore = create<GameStore>()(
               ...state.player,
               shieldHealth: newShieldHealth,
               shieldActive: newShieldHealth > 0,
+              shieldDown: newShieldHealth <= 0, // Manage shield down state directly here
             }
           };
         });
-        
-        // Use consistent shield down state management
-        const currentState = get();
-        if (currentState.player) {
-          const { setShieldDown } = get();
-          setShieldDown(currentState.player.shieldHealth <= 0);
-        }
       },
 
       regenerateShield: (deltaTime: number) => {
@@ -257,19 +251,15 @@ export const useGameStore = create<GameStore>()(
             state.player.shieldHealth + regenAmount
           );
           
-          // If shield was down and we're regenerating, bring it back online
-          if (state.player.shieldDown && newShieldHealth > 0) {
-            set((state) => ({
-              player: state.player ? {
-                ...state.player,
-                shieldHealth: newShieldHealth,
-                shieldActive: true,
-                shieldDown: false, // Shield is back online
-              } : null,
-            }));
-          } else {
-            get().updatePlayerShield(newShieldHealth);
-          }
+          // Update shield health directly to avoid recursive calls
+          set((state) => ({
+            player: state.player ? {
+              ...state.player,
+              shieldHealth: newShieldHealth,
+              shieldActive: newShieldHealth > 0,
+              shieldDown: newShieldHealth <= 0,
+            } : null,
+          }));
         }
       },
 
@@ -297,7 +287,7 @@ export const useGameStore = create<GameStore>()(
             ? {
                 ...state.player,
                 shieldDown: isDown,
-                shieldActive: !isDown && state.player.shieldHealth > 0,
+                shieldActive: !isDown, // Shield is active when not down
               }
             : null,
         }));
