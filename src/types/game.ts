@@ -19,6 +19,11 @@ export interface GameConfig {
   enemySpawnRate: number;
   maxBullets: number;
   maxEnemies: number;
+  // Shield configuration
+  shieldHeight: number;
+  shieldRegenRate: number;
+  shieldRegenDelay: number;
+  shieldMaxHealth: number;
 }
 
 export interface GameState {
@@ -49,6 +54,13 @@ export interface PlayerEntity extends EntityType {
   maxHealth: number;
   shootCooldown: number;
   canShoot: boolean;
+  // Shield system
+  shieldHealth: number;
+  maxShieldHealth: number;
+  shieldRegenRate: number;
+  shieldRegenDelay: number;
+  lastShieldDamageTime: number;
+  shieldActive: boolean;
 }
 
 export interface EnemyEntity extends EntityType {
@@ -57,6 +69,7 @@ export interface EnemyEntity extends EntityType {
   damage: number;
   aiType: 'straight' | 'zigzag' | 'seeking' | 'circling';
   spawnTime: number;
+  shieldDamage: number; // Damage to shield when breaching bottom boundary
 }
 
 export interface BulletEntity extends EntityType {
@@ -116,5 +129,12 @@ export interface ExplosionEffect {
   x: number;
   y: number;
   particles: Particle[];
+  active: boolean;
+}
+
+
+export interface ShieldZone {
+  y: number; // Y position of the shield line
+  height: number; // Height of the protection zone
   active: boolean;
 }

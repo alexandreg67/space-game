@@ -127,7 +127,8 @@ export const createEnemyPool = () => {
       health: 30,
       damage: 20,
       aiType: 'straight',
-      spawnTime: 0
+      spawnTime: 0,
+      shieldDamage: 10
     }),
     // Reset function
     (enemy) => {
