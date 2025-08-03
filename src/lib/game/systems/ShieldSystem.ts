@@ -1,5 +1,5 @@
 import { useGameStore } from '@/lib/stores/gameStore';
-import { releaseEnemyToPool } from '@/lib/game/utils/objectPool';
+import { releaseEnemyToPool, getParticleFromPool } from '@/lib/game/utils/objectPool';
 import type { EnemyEntity, ShieldZone } from '@/types/game';
 
 export class ShieldSystem {
@@ -67,10 +67,18 @@ export class ShieldSystem {
     // Increase damage based on how deep the enemy penetrated
     damage += Math.floor(penetrationDepth / 10);
 
+    // Calculate impact point and angle
+    const impactX = enemy.position.x;
+    const impactY = this.shieldZone.y;
+    const impactAngle = Math.atan2(enemy.velocity.y, enemy.velocity.x);
+    const severity = Math.min(damage / 20, 1.0); // Normalize to 0-1
+
+    // Create enhanced shield breach effects
+    this.createShieldBreachEffect(impactX, impactY, impactAngle, severity);
+    this.createShieldRippleEffect(impactX, impactY, severity);
+
     // Apply shield damage
     gameState.damageShield(damage);
-
-
 
     // Remove the enemy
     this.destroyBreachingEnemy(enemy);
@@ -120,8 +128,66 @@ export class ShieldSystem {
     releaseEnemyToPool(enemy);
   }
 
+  // Create enhanced shield breach particle effect
+  private createShieldBreachEffect(x: number, y: number, angle: number, severity: number): void {
+    const particleCount = Math.floor(12 + severity * 8); // 12-20 particles based on severity
+    const colors = severity > 0.7 ? 
+      ['#ff0000', '#ff4400', '#ffaa00', '#ffffff'] : // High damage - fire colors
+      ['#00ffff', '#44aaff', '#88ccff', '#aaccff']; // Normal damage - shield colors
 
+    for (let i = 0; i < particleCount; i++) {
+      const particle = getParticleFromPool();
+      
+      // Create directional spread based on impact angle
+      const spreadAngle = (Math.PI / 3) * (Math.random() - 0.5); // 60-degree spread
+      const particleAngle = angle + spreadAngle;
+      const speed = 80 + severity * 120 + Math.random() * 60; // Variable speed
+      
+      particle.x = x + (Math.random() - 0.5) * 20; // Small spread at impact point
+      particle.y = y + (Math.random() - 0.5) * 10;
+      particle.vx = Math.cos(particleAngle) * speed;
+      particle.vy = Math.sin(particleAngle) * speed;
+      
+      // Particle properties
+      particle.life = 400 + severity * 400; // Longer life for severe impacts
+      particle.maxLife = particle.life;
+      particle.color = colors[Math.floor(Math.random() * colors.length)];
+      particle.size = 2 + severity * 3 + Math.random() * 2;
+      particle.alpha = 1;
+      particle.decay = 0.006 + Math.random() * 0.004; // Variable decay
+    }
+  }
 
+  // Create shield ripple effect (visual-only particles)
+  private createShieldRippleEffect(x: number, y: number, severity: number): void {
+    const ringCount = Math.floor(2 + severity * 2); // 2-4 concentric rings
+    
+    for (let ring = 0; ring < ringCount; ring++) {
+      const delay = ring * 100; // Stagger ring creation
+      const particlesPerRing = 16 + ring * 4; // More particles for outer rings
+      
+      setTimeout(() => {
+        for (let i = 0; i < particlesPerRing; i++) {
+          const particle = getParticleFromPool();
+          const angle = (Math.PI * 2 * i) / particlesPerRing;
+          const speed = 40 + ring * 20; // Faster for outer rings
+          
+          particle.x = x;
+          particle.y = y;
+          particle.vx = Math.cos(angle) * speed;
+          particle.vy = Math.sin(angle) * speed * 0.3; // Flatten vertically for shield effect
+          
+          // Ring-specific properties
+          particle.life = 600 - ring * 100; // Inner rings last longer
+          particle.maxLife = particle.life;
+          particle.color = severity > 0.5 ? '#ff4400' : '#00ffff';
+          particle.size = 1 + Math.random();
+          particle.alpha = 0.8 - ring * 0.15; // Fade outer rings
+          particle.decay = 0.003 + ring * 0.002;
+        }
+      }, delay);
+    }
+  }
 
   // Get shield zone for rendering
   getShieldZone(): ShieldZone {

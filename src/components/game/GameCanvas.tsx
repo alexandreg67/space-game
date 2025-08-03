@@ -16,6 +16,7 @@ import Bullet from "./Bullet";
 import SpaceDustLayer from "./SpaceDustLayer";
 import SpeedBackground from "./SpeedBackground";
 import ShieldZone from "./ShieldZone";
+import ScreenEffects from "./effects/ScreenEffects";
 import HUD from "./UI/HUD";
 
 interface GameCanvasProps {
@@ -351,6 +352,9 @@ export default function GameCanvas({
       // Update shield system
       shieldSystem.update(deltaTime);
 
+      // Update screen effects (cleanup expired effects)
+      useGameStore.getState().updateScreenEffects(currentTime);
+
       // Continue the loop
       animationRef.current = requestAnimationFrame(gameLoop);
     },
@@ -436,6 +440,11 @@ export default function GameCanvas({
         {/* UI Layer */}
         <Layer name="ui" listening={false}>
           <HUD width={width} height={height} />
+        </Layer>
+
+        {/* Effects Layer - Screen effects like flash and shake */}
+        <Layer name="effects" listening={false}>
+          <ScreenEffects width={width} height={height} />
         </Layer>
       </Stage>
 

@@ -24,6 +24,8 @@ export interface GameConfig {
   shieldRegenRate: number;
   shieldRegenDelay: number;
   shieldMaxHealth: number;
+  // Visual effects settings
+  enableScreenEffects: boolean;
 }
 
 export interface GameState {
@@ -137,4 +139,17 @@ export interface ShieldZone {
   y: number; // Y position of the shield line
   height: number; // Height of the protection zone
   active: boolean;
+}
+
+export interface ScreenEffect {
+  type: 'flash' | 'shake';
+  color?: string; // For flash effects
+  intensity: number; // 0-1 for flash opacity, 0-1 for shake amplitude
+  duration: number; // Duration in milliseconds
+  timestamp: number; // When the effect started
+}
+
+export interface ParticleExtended extends Particle {
+  alpha: number;
+  decay: number;
 }

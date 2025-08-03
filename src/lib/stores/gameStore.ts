@@ -9,6 +9,7 @@ import type {
   InputState,
   GameConfig,
   Vector2D,
+  ScreenEffect,
 } from "@/types/game";
 
 interface GameStore extends GameState {
@@ -26,6 +27,9 @@ interface GameStore extends GameState {
 
   // Background scroll
   backgroundOffset: number;
+
+  // Screen effects
+  screenEffects: ScreenEffect[];
 
   // Actions
   initializeGame: () => void;
@@ -68,6 +72,10 @@ interface GameStore extends GameState {
   // Entity updates
   updateEntities: (deltaTime: number) => void;
   cleanupInactiveEntities: () => void;
+
+  // Screen effects
+  addScreenEffect: (effect: ScreenEffect) => void;
+  updateScreenEffects: (currentTime: number) => void;
 }
 
 const defaultConfig: GameConfig = {
@@ -84,6 +92,8 @@ const defaultConfig: GameConfig = {
   shieldRegenRate: 0.5, // Points per second regeneration
   shieldRegenDelay: 3000, // Delay after damage before regen starts (ms)
   shieldMaxHealth: 100, // Maximum shield health
+  // Visual effects settings
+  enableScreenEffects: true, // Enable screen flash and shake effects
 };
 
 const defaultInputState: InputState = {
@@ -108,6 +118,7 @@ export const useGameStore = create<GameStore>()(
           bullets: [],
           powerups: [],
           backgroundOffset: 0,
+          screenEffects: [],
           input: { ...defaultInputState, keys: new Set() },
         });
         actions.createPlayer();
@@ -403,6 +414,21 @@ export const useGameStore = create<GameStore>()(
           powerups: state.powerups.filter((powerup) => powerup.active),
         }));
       },
+
+      // Screen effects management
+      addScreenEffect: (effect: ScreenEffect) => {
+        set((state) => ({
+          screenEffects: [...state.screenEffects, effect],
+        }));
+      },
+
+      updateScreenEffects: (currentTime: number) => {
+        set((state) => ({
+          screenEffects: state.screenEffects.filter(
+            (effect) => currentTime - effect.timestamp < effect.duration
+          ),
+        }));
+      },
     };
 
     return {
@@ -422,6 +448,7 @@ export const useGameStore = create<GameStore>()(
       input: defaultInputState,
       config: defaultConfig,
       backgroundOffset: 0,
+      screenEffects: [],
 
       // Return stable action references
       ...actions,
@@ -470,6 +497,8 @@ export const useGameActions = () =>
     updateBackgroundOffset: state.updateBackgroundOffset,
     updateEntities: state.updateEntities,
     cleanupInactiveEntities: state.cleanupInactiveEntities,
+    addScreenEffect: state.addScreenEffect,
+    updateScreenEffects: state.updateScreenEffects,
     addKey: state.addKey,
     removeKey: state.removeKey,
     updateMouse: state.updateMouse,

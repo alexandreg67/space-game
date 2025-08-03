@@ -95,8 +95,11 @@ export class CollisionSystem {
     // Damage enemy
     enemy.health -= bullet.damage;
     
-    // Create impact effect
-    this.createImpactEffect(bullet.position.x, bullet.position.y, '#ffaa00');
+    // Calculate impact intensity based on damage and enemy health
+    const intensity = Math.min(bullet.damage / 30, 1.0);
+    
+    // Create enhanced impact effect
+    this.createImpactEffect(bullet.position.x, bullet.position.y, '#ffaa00', intensity);
     
     // Remove bullet
     bullet.active = false;
@@ -113,6 +116,9 @@ export class CollisionSystem {
   private handleBulletPlayerCollision(bullet: BulletEntity, player: PlayerEntity): void {
     const gameState = useGameStore.getState();
     
+    // Calculate intensity based on damage relative to player health
+    const intensity = Math.min(bullet.damage / 25, 1.2);
+    
     // Check shield first, then player health
     if (player.shieldActive && player.shieldHealth > 0) {
       // Shield absorbs the damage
@@ -121,16 +127,16 @@ export class CollisionSystem {
       
       gameState.damageShield(shieldDamage);
       
-      // Create shield impact effect
-      this.createImpactEffect(bullet.position.x, bullet.position.y, '#00ffff');
+      // Create shield impact effect with intensity
+      this.createImpactEffect(bullet.position.x, bullet.position.y, '#00ffff', intensity * 0.8);
       
       // If there's excess damage, apply to player health
       if (excessDamage > 0) {
         const newHealth = player.health - excessDamage;
         gameState.updatePlayerHealth(newHealth);
         
-        // Create additional impact effect for health damage
-        this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400');
+        // Create additional impact effect for health damage with higher intensity
+        this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400', intensity * 1.2);
         
         // Check if player is destroyed
         if (newHealth <= 0) {
@@ -142,8 +148,8 @@ export class CollisionSystem {
       const newHealth = player.health - bullet.damage;
       gameState.updatePlayerHealth(newHealth);
       
-      // Create impact effect
-      this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400');
+      // Create intense impact effect for unshielded hit
+      this.createImpactEffect(bullet.position.x, bullet.position.y, '#ff4400', intensity * 1.5);
       
       // Check if player is destroyed
       if (newHealth <= 0) {
@@ -197,11 +203,13 @@ export class CollisionSystem {
     // Damage enemy
     enemy.health -= enemyDamage;
     
-    // Create large impact effect
+    // Create large impact effect with high intensity
+    const collisionIntensity = 1.8; // Player-enemy collisions are always intense
     this.createImpactEffect(
       (player.position.x + enemy.position.x) / 2,
       (player.position.y + enemy.position.y) / 2,
-      player.shieldActive && player.shieldHealth > 0 ? '#00ffff' : '#ffffff'
+      player.shieldActive && player.shieldHealth > 0 ? '#00ffff' : '#ffffff',
+      collisionIntensity
     );
     
     // Check if enemy is destroyed
@@ -276,44 +284,119 @@ export class CollisionSystem {
     gameState.updatePlayerShield(gameState.config.shieldMaxHealth);
   }
 
-  // Create impact particle effect
-  private createImpactEffect(x: number, y: number, color: string): void {
-    for (let i = 0; i < 8; i++) {
+  // Create enhanced impact particle effect
+  private createImpactEffect(x: number, y: number, color: string, intensity: number = 1.0): void {
+    const particleCount = Math.floor(8 * intensity); // Scale particle count with intensity
+    const baseColors = color === '#00ffff' ? 
+      ['#00ffff', '#44aaff', '#88ccff', '#aaccff'] : // Shield colors
+      color === '#ff4400' ? 
+      ['#ff4400', '#ffaa00', '#ff8800', '#ffffff'] : // Health damage colors
+      ['#ffaa00', '#ff8800', '#ffcc44', '#ffffff']; // Default impact colors
+
+    for (let i = 0; i < particleCount; i++) {
       const particle = getParticleFromPool();
-      particle.x = x;
-      particle.y = y;
-      particle.vx = (Math.random() - 0.5) * 200;
-      particle.vy = (Math.random() - 0.5) * 200;
-      particle.life = 300;
-      particle.maxLife = 300;
-      particle.color = color;
-      particle.size = Math.random() * 3 + 1;
+      
+      // Enhanced positioning with slight spread
+      particle.x = x + (Math.random() - 0.5) * 15;
+      particle.y = y + (Math.random() - 0.5) * 15;
+      
+      // Physics-based velocity with radial pattern
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+      const speed = 100 + intensity * 150 + Math.random() * 100;
+      particle.vx = Math.cos(angle) * speed;
+      particle.vy = Math.sin(angle) * speed;
+      
+      // Enhanced particle properties
+      particle.life = 250 + intensity * 250 + Math.random() * 200;
+      particle.maxLife = particle.life;
+      particle.color = baseColors[Math.floor(Math.random() * baseColors.length)];
+      particle.size = Math.random() * 2 + intensity * 2 + 0.5;
       particle.alpha = 1;
-      particle.decay = 0.01;
+      particle.decay = 0.007 + Math.random() * 0.005;
+    }
+
+    // Add screen flash for significant impacts
+    if (intensity > 0.7) {
+      this.createScreenFlash(color, intensity * 0.3);
     }
   }
 
-  // Create explosion particle effect
+  // Create enhanced explosion particle effect
   private createExplosionEffect(x: number, y: number, large: boolean = false): void {
-    const particleCount = large ? 20 : 12;
-    const colors = ['#ff4400', '#ffaa00', '#ff8800', '#ffffff'];
+    const particleCount = large ? 24 : 16; // Increased particle count
+    const colors = ['#ff4400', '#ffaa00', '#ff8800', '#ffffff', '#ff0000'];
+    const innerRing = Math.floor(particleCount * 0.6);
+    const outerRing = particleCount - innerRing;
     
-    for (let i = 0; i < particleCount; i++) {
+    // Inner ring - faster, brighter particles
+    for (let i = 0; i < innerRing; i++) {
       const particle = getParticleFromPool();
-      const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = large ? 150 : 100;
+      const angle = (Math.PI * 2 * i) / innerRing + Math.random() * 0.3;
+      const speed = (large ? 120 : 80) + Math.random() * 80;
+      
+      particle.x = x + (Math.random() - 0.5) * 10;
+      particle.y = y + (Math.random() - 0.5) * 10;
+      particle.vx = Math.cos(angle) * speed;
+      particle.vy = Math.sin(angle) * speed;
+      particle.life = large ? 600 : 400;
+      particle.maxLife = particle.life;
+      particle.color = colors[Math.floor(Math.random() * colors.length)];
+      particle.size = large ? Math.random() * 4 + 2 : Math.random() * 3 + 1;
+      particle.alpha = 1;
+      particle.decay = 0.006;
+    }
+    
+    // Outer ring - slower, longer-lasting particles
+    for (let i = 0; i < outerRing; i++) {
+      const particle = getParticleFromPool();
+      const angle = (Math.PI * 2 * i) / outerRing + Math.random() * 0.5;
+      const speed = (large ? 180 : 140) + Math.random() * 60;
       
       particle.x = x;
       particle.y = y;
-      particle.vx = Math.cos(angle) * speed * (0.5 + Math.random() * 0.5);
-      particle.vy = Math.sin(angle) * speed * (0.5 + Math.random() * 0.5);
-      particle.life = large ? 800 : 500;
+      particle.vx = Math.cos(angle) * speed;
+      particle.vy = Math.sin(angle) * speed;
+      particle.life = large ? 1000 : 700;
       particle.maxLife = particle.life;
-      particle.color = colors[Math.floor(Math.random() * colors.length)];
-      particle.size = large ? Math.random() * 6 + 2 : Math.random() * 4 + 1;
-      particle.alpha = 1;
-      particle.decay = 0.005;
+      particle.color = colors[Math.floor(Math.random() * (colors.length - 1))]; // Skip white for outer ring
+      particle.size = large ? Math.random() * 3 + 1 : Math.random() * 2 + 0.5;
+      particle.alpha = 0.8;
+      particle.decay = 0.004;
     }
+
+    // Screen flash for large explosions
+    if (large) {
+      this.createScreenFlash('#ffffff', 0.4);
+      this.createCameraShake(0.8, 300);
+    }
+  }
+
+  // Create screen flash effect
+  private createScreenFlash(color: string, intensity: number): void {
+    const gameState = useGameStore.getState();
+    if (!gameState.config?.enableScreenEffects) return; // Allow disabling in settings
+    
+    // Create a temporary flash element via game store
+    gameState.addScreenEffect({
+      type: 'flash',
+      color: color,
+      intensity: Math.min(intensity, 0.6), // Cap intensity to prevent seizure risk
+      duration: 150, // Short flash duration
+      timestamp: Date.now()
+    });
+  }
+
+  // Create camera shake effect
+  private createCameraShake(intensity: number, duration: number): void {
+    const gameState = useGameStore.getState();
+    if (!gameState.config?.enableScreenEffects) return;
+    
+    gameState.addScreenEffect({
+      type: 'shake',
+      intensity: Math.min(intensity, 1.0),
+      duration: Math.min(duration, 500), // Cap duration
+      timestamp: Date.now()
+    });
   }
 
   // Clean up inactive entities
