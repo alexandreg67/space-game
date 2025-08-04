@@ -1,0 +1,785 @@
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import type {
+  GameState,
+  PlayerEntity,
+  EnemyEntity,
+  BulletEntity,
+  PowerupEntity,
+  InputState,
+  GameConfig,
+  Vector2D,
+  ScreenEffect,
+} from "@/types/game";
+import type { Particle } from "@/lib/game/utils/objectPool";
+import { poolManager } from "@/lib/game/utils/objectPool";
+import type { AudioConfig, SoundId, PlaySoundOptions } from "@/lib/audio/audioConfig";
+import { audioManager } from "@/lib/audio/AudioManager";
+import { DEFAULT_AUDIO_CONFIG } from "@/lib/audio/audioConfig";
+
+// Utility function for SSR safety
+const isBrowser = () => typeof window !== 'undefined';
+
+// Initialize high score once to avoid repeated SSR checks
+const initialHighScore = isBrowser() 
+  ? parseInt(localStorage.getItem('spaceGameHighScore') || '0') 
+  : 0;
+
+// Helper function to calculate shield status flags based on health
+function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
+  return {
+    shieldActive: newShieldHealth > 0,
+    shieldDown: newShieldHealth <= 0, // Shield is down when health is depleted
+  };
+}
+
+interface GameStore extends GameState {
+  // Entities
+  player: PlayerEntity | null;
+  enemies: EnemyEntity[];
+  bullets: BulletEntity[];
+  powerups: PowerupEntity[];
+
+  // Input
+  input: InputState;
+
+  // Game config
+  config: GameConfig;
+
+  // Audio config
+  audioConfig: AudioConfig;
+
+  // Background scroll
+  backgroundOffset: number;
+
+  // Screen effects
+  screenEffects: ScreenEffect[];
+
+  // Shield particles
+  shieldParticles: Particle[];
+
+  // Game Over state
+  isGameOver: boolean;
+  highScore: number;
+
+  // Actions
+  initializeGame: () => void;
+  startGame: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
+  endGame: () => void;
+  resetGame: () => void;
+  checkGameOver: () => void;
+
+  // Player actions
+  createPlayer: () => void;
+  updatePlayerPosition: (position: Vector2D) => void;
+  updatePlayerHealth: (health: number) => void;
+  updatePlayerShield: (shieldHealth: number) => void;
+  regenerateShield: (deltaTime: number) => void;
+  damageShield: (damage: number) => void;
+  setShieldDown: (isDown: boolean) => void;
+
+  // Entity management
+  addEnemy: (enemy: EnemyEntity) => void;
+  removeEnemy: (id: string) => void;
+  addBullet: (bullet: BulletEntity) => void;
+  removeBullet: (id: string) => void;
+  addPowerup: (powerup: PowerupEntity) => void;
+  removePowerup: (id: string) => void;
+
+  // Game state updates
+  updateScore: (points: number) => void;
+  updateLives: (lives: number) => void;
+  updateLevel: (level: number) => void;
+  updateGameTime: (deltaTime: number) => void;
+  updateBackgroundOffset: (offset: number) => void;
+
+  // Input handling
+  updateInput: (input: Partial<InputState>) => void;
+  addKey: (key: string) => void;
+  removeKey: (key: string) => void;
+  updateMouse: (x: number, y: number, pressed: boolean) => void;
+  updateTouch: (x: number, y: number, active: boolean) => void;
+
+  // Entity updates
+  updateEntities: (deltaTime: number) => void;
+  cleanupInactiveEntities: () => void;
+
+  // Screen effects
+  addScreenEffect: (effect: ScreenEffect) => void;
+  updateScreenEffects: (currentTime: number) => void;
+
+  // Shield particles
+  addShieldParticle: (particle: Particle) => void;
+  addShieldParticles: (particles: Particle[]) => void;
+  updateShieldParticles: (deltaTime: number) => void;
+  clearShieldParticles: () => void;
+
+  // Accessibility settings
+  updateAccessibilitySettings: (settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>) => void;
+
+  // Audio actions
+  initializeAudio: () => Promise<boolean>;
+  updateAudioConfig: (config: Partial<AudioConfig>) => void;
+  toggleMute: () => boolean;
+  playGameSound: (soundId: SoundId, options?: PlaySoundOptions) => void;
+  playBackgroundMusic: (musicId: string) => void;
+  pauseMusic: () => void;
+  resumeMusic: () => void;
+}
+
+const defaultConfig: GameConfig = {
+  width: 800,
+  height: 600,
+  playerSpeed: 300,
+  bulletSpeed: 500,
+  enemySpeed: 100,
+  enemySpawnRate: 2000, // milliseconds
+  maxBullets: 50,
+  maxEnemies: 20,
+  // Shield configuration
+  shieldHeight: 50, // Height of protection zone from bottom
+  shieldRegenRate: 0.5, // Points per second regeneration
+  shieldRegenDelay: 3000, // Delay after damage before regen starts (ms)
+  shieldMaxHealth: 100, // Maximum shield health
+  // Visual effects settings
+  enableScreenEffects: true, // Enable screen flash and shake effects
+  // Accessibility settings
+  enableHapticFeedback: true, // Enable haptic feedback (requires user consent)
+  enableScreenFlash: true, // Enable screen flash effects
+  reducedMotion: false, // Reduce motion for accessibility
+  flashIntensityLimit: 0.6, // Maximum flash opacity (0.6 = 60% for accessibility)
+};
+
+// Factory function to create fresh input state with new Set instance
+const createDefaultInputState = (): InputState => ({
+  keys: new Set<string>(),
+  mouse: { x: 0, y: 0, pressed: false },
+  touch: { x: 0, y: 0, active: false },
+});
+
+// Centralized initial game state for consistent resets
+const getInitialGameState = () => ({
+  isRunning: false,
+  isPaused: false,
+  isGameOver: false,
+  score: 0,
+  lives: 3,
+  level: 1,
+  gameTime: 0,
+  highScore: initialHighScore,
+  player: null,
+  enemies: [],
+  bullets: [],
+  powerups: [],
+  screenEffects: [],
+  shieldParticles: [],
+  input: createDefaultInputState(),
+  config: defaultConfig,
+  audioConfig: DEFAULT_AUDIO_CONFIG,
+  backgroundOffset: 0,
+});
+
+export const useGameStore = create<GameStore>()(
+  subscribeWithSelector((set, get) => {
+    const actions = {
+      // Game lifecycle
+      initializeGame: () => {
+        const initialState = getInitialGameState();
+        set(initialState);
+        actions.createPlayer();
+      },
+
+      startGame: () => {
+        set({ isRunning: true, isPaused: false });
+      },
+
+      pauseGame: () => {
+        set({ isPaused: true });
+      },
+
+      resumeGame: () => {
+        set({ isPaused: false });
+      },
+
+      endGame: () => {
+        set({ isRunning: false, isPaused: false });
+      },
+
+      resetGame: () => {
+        const currentState = get();
+        
+        // Save high score before reset
+        const newHighScore = Math.max(currentState.score, currentState.highScore);
+        if (isBrowser()) {
+          localStorage.setItem('spaceGameHighScore', newHighScore.toString());
+        }
+
+        // Release all active entities back to their object pools
+        try {
+          poolManager.releaseAll();
+        } catch (error) {
+          console.warn('Error releasing objects to pools during reset:', error);
+        }
+
+        // Reset to initial state
+        const initialState = getInitialGameState();
+        set({
+          ...initialState,
+          highScore: newHighScore,
+          isGameOver: false,
+        });
+        
+        // Create new player
+        actions.createPlayer();
+      },
+
+      checkGameOver: () => {
+        const state = get();
+        // Game over when lives reach 0 (health management is handled by CollisionSystem)
+        if (state.lives <= 0) {
+          set({ 
+            isRunning: false, 
+            isGameOver: true,
+            isPaused: false 
+          });
+          
+          // Save high score
+          const newHighScore = Math.max(state.score, state.highScore);
+          if (isBrowser()) {
+            localStorage.setItem('spaceGameHighScore', newHighScore.toString());
+          }
+          set({ highScore: newHighScore });
+        }
+      },
+
+      // Player management
+      createPlayer: () => {
+        const { config } = get();
+        const player: PlayerEntity = {
+          id: "player",
+          type: "player",
+          position: {
+            x: config.width / 2,
+            y: config.height - 100,
+          },
+          velocity: { x: 0, y: 0 },
+          size: { x: 40, y: 40 },
+          rotation: 0,
+          active: true,
+          health: 100,
+          maxHealth: 100,
+          shootCooldown: 0,
+          canShoot: true,
+          // Shield system
+          shieldHealth: config.shieldMaxHealth,
+          maxShieldHealth: config.shieldMaxHealth,
+          shieldRegenRate: config.shieldRegenRate,
+          shieldRegenDelay: config.shieldRegenDelay,
+          lastShieldDamageTime: 0,
+          shieldActive: true,
+          shieldDown: false,
+        };
+        set({ player });
+      },
+
+      updatePlayerPosition: (position: Vector2D) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                position: { ...position },
+              }
+            : null,
+        }));
+      },
+
+      updatePlayerHealth: (health: number) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                health: Math.max(0, Math.min(health, state.player.maxHealth)),
+              }
+            : null,
+        }));
+      },
+
+      updatePlayerShield: (shieldHealth: number) => {
+        set((state) => {
+          if (!state.player) return state;
+          
+          const newShieldHealth = Math.max(0, Math.min(shieldHealth, state.player.maxShieldHealth));
+          const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
+          
+          return {
+            ...state,
+            player: {
+              ...state.player,
+              shieldHealth: newShieldHealth,
+              ...shieldFlags,
+            }
+          };
+        });
+      },
+
+      regenerateShield: (deltaTime: number) => {
+        const state = get();
+        const now = Date.now();
+        
+        if (!state.player) return;
+        
+        const timeSinceLastDamage = now - state.player.lastShieldDamageTime;
+        
+        // Allow regeneration even when shield is down to enable recovery gameplay
+        // This is intentional - players can recover from shield depletion
+        if (timeSinceLastDamage >= state.player.shieldRegenDelay && 
+            state.player.shieldHealth < state.player.maxShieldHealth) {
+          const regenAmount = (state.player.shieldRegenRate * deltaTime) / 1000;
+          const newShieldHealth = Math.min(
+            state.player.maxShieldHealth, 
+            state.player.shieldHealth + regenAmount
+          );
+          
+          // Update shield health directly to avoid recursive calls
+          set((state) => {
+            if (!state.player) return state;
+            
+            const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
+            
+            return {
+              ...state,
+              player: {
+                ...state.player,
+                shieldHealth: newShieldHealth,
+                ...shieldFlags,
+              }
+            };
+          });
+        }
+      },
+
+      damageShield: (damage: number) => {
+        const state = get();
+        if (!state.player) return;
+        
+        const newShieldHealth = Math.max(0, state.player.shieldHealth - damage);
+        const shieldFlags = calculateShieldFlags(state.player.shieldDown, newShieldHealth);
+        
+        set((prevState) => ({
+          player: prevState.player
+            ? {
+                ...prevState.player,
+                shieldHealth: newShieldHealth,
+                lastShieldDamageTime: Date.now(),
+                ...shieldFlags,
+              }
+            : null,
+        }));
+      },
+
+      setShieldDown: (isDown: boolean) => {
+        set((state) => ({
+          player: state.player
+            ? {
+                ...state.player,
+                shieldDown: isDown,
+                shieldActive: state.player.shieldHealth > 0, // Shield is active when it has health
+              }
+            : null,
+        }));
+      },
+
+      // Entity management
+      addEnemy: (enemy: EnemyEntity) => {
+        set((state) => ({
+          enemies: [...state.enemies, enemy],
+        }));
+      },
+
+      removeEnemy: (id: string) => {
+        set((state) => ({
+          enemies: state.enemies.filter((enemy) => enemy.id !== id),
+        }));
+      },
+
+      addBullet: (bullet: BulletEntity) => {
+        set((state) => {
+          const bullets = [...state.bullets, bullet];
+          // Limit bullet count to prevent memory issues
+          if (bullets.length > state.config.maxBullets) {
+            bullets.shift(); // Remove oldest bullet
+          }
+          return { bullets };
+        });
+      },
+
+      removeBullet: (id: string) => {
+        set((state) => ({
+          bullets: state.bullets.filter((bullet) => bullet.id !== id),
+        }));
+      },
+
+      addPowerup: (powerup: PowerupEntity) => {
+        set((state) => ({
+          powerups: [...state.powerups, powerup],
+        }));
+      },
+
+      removePowerup: (id: string) => {
+        set((state) => ({
+          powerups: state.powerups.filter((powerup) => powerup.id !== id),
+        }));
+      },
+
+      // Game state updates
+      updateScore: (points: number) => {
+        set((state) => {
+          const newScore = state.score + points;
+          // Calculate new level based on score (level up every 1000 points)
+          const newLevel = Math.floor(newScore / 1000) + 1;
+          
+          // Play level up sound if level increased
+          if (newLevel > state.level) {
+            // Use a small delay to ensure the level update is processed first
+            setTimeout(() => {
+              get().playGameSound('level_up', { volume: 0.8 });
+            }, 50);
+          }
+          
+          return {
+            score: newScore,
+            level: newLevel,
+          };
+        });
+      },
+
+      updateLives: (lives: number) => {
+        const newLives = Math.max(0, lives);
+        set({ lives: newLives });
+        // Note: checkGameOver is handled separately to avoid recursion
+      },
+
+      updateLevel: (level: number) => {
+        set({ level });
+      },
+
+      updateGameTime: (deltaTime: number) => {
+        set((state) => ({
+          gameTime: state.gameTime + deltaTime,
+        }));
+      },
+
+      updateBackgroundOffset: (offset: number) => {
+        set({ backgroundOffset: offset });
+      },
+
+      // Input handling
+      updateInput: (input: Partial<InputState>) => {
+        set((state) => ({
+          input: { ...state.input, ...input },
+        }));
+      },
+
+      addKey: (key: string) => {
+        set((state) => {
+          const newKeys = new Set(state.input.keys);
+          newKeys.add(key);
+          return {
+            input: { ...state.input, keys: newKeys },
+          };
+        });
+      },
+
+      removeKey: (key: string) => {
+        set((state) => {
+          const newKeys = new Set(state.input.keys);
+          newKeys.delete(key);
+          return {
+            input: { ...state.input, keys: newKeys },
+          };
+        });
+      },
+
+      updateMouse: (x: number, y: number, pressed: boolean) => {
+        set((state) => ({
+          input: {
+            ...state.input,
+            mouse: { x, y, pressed },
+          },
+        }));
+      },
+
+      updateTouch: (x: number, y: number, active: boolean) => {
+        set((state) => ({
+          input: {
+            ...state.input,
+            touch: { x, y, active },
+          },
+        }));
+      },
+
+      // Entity updates
+      updateEntities: (deltaTime: number) => {
+        set((state) => {
+          const { config } = state;
+
+          // Update bullets
+          const updatedBullets = state.bullets
+            .map((bullet) => ({
+              ...bullet,
+              position: {
+                x: bullet.position.x + (bullet.velocity.x * deltaTime) / 1000,
+                y: bullet.position.y + (bullet.velocity.y * deltaTime) / 1000,
+              },
+              lifespan: bullet.lifespan - deltaTime,
+            }))
+            .filter(
+              (bullet) =>
+                bullet.lifespan > 0 &&
+                bullet.position.y > -50 &&
+                bullet.position.y < config.height + 50
+            );
+
+          // Update enemies
+          const updatedEnemies = state.enemies
+            .map((enemy) => ({
+              ...enemy,
+              position: {
+                x: enemy.position.x + (enemy.velocity.x * deltaTime) / 1000,
+                y: enemy.position.y + (enemy.velocity.y * deltaTime) / 1000,
+              },
+            }))
+            .filter(
+              (enemy) => enemy.position.y < config.height + 100 && enemy.active
+            );
+
+          return {
+            bullets: updatedBullets,
+            enemies: updatedEnemies,
+          };
+        });
+      },
+
+      cleanupInactiveEntities: () => {
+        set((state) => ({
+          enemies: state.enemies.filter((enemy) => enemy.active),
+          bullets: state.bullets.filter((bullet) => bullet.active),
+          powerups: state.powerups.filter((powerup) => powerup.active),
+        }));
+      },
+
+      // Screen effects management
+      addScreenEffect: (effect: ScreenEffect) => {
+        set((state) => ({
+          screenEffects: [...state.screenEffects, effect],
+        }));
+      },
+
+      updateScreenEffects: (currentTime: number) => {
+        set((state) => ({
+          screenEffects: state.screenEffects.filter(
+            (effect) => currentTime - effect.timestamp < effect.duration
+          ),
+        }));
+      },
+
+      // Shield particles management
+      addShieldParticle: (particle: Particle) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, particle],
+        }));
+      },
+
+      addShieldParticles: (particles: Particle[]) => {
+        set((state) => ({
+          shieldParticles: [...state.shieldParticles, ...particles],
+        }));
+      },
+
+      updateShieldParticles: (deltaTime: number) => {
+        const deltaSeconds = deltaTime / 1000;
+        
+        set((state) => ({
+          shieldParticles: state.shieldParticles
+            .map(particle => {
+              const newLife = particle.life - deltaTime;
+              // Pre-calculate alpha based on life ratio for better performance
+              const alphaRatio = particle.maxLife > 0 ? newLife / particle.maxLife : 0;
+              const calculatedAlpha = Math.max(0, alphaRatio);
+              
+              return {
+                ...particle,
+                x: particle.x + particle.vx * deltaSeconds,
+                y: particle.y + particle.vy * deltaSeconds,
+                life: newLife,
+                alpha: calculatedAlpha
+              };
+            })
+            .filter(particle => particle.life > 0)
+        }));
+      },
+
+      clearShieldParticles: () => {
+        set({ shieldParticles: [] });
+      },
+
+      // Accessibility settings management
+      updateAccessibilitySettings: (
+        settings: Partial<Pick<GameConfig, 'enableHapticFeedback' | 'enableScreenFlash' | 'reducedMotion' | 'flashIntensityLimit'>>
+      ) => {
+        set((state) => ({
+          config: { ...state.config, ...settings }
+        }));
+      },
+
+      // Audio management
+      initializeAudio: async (): Promise<boolean> => {
+        try {
+          const success = await audioManager.initialize();
+          if (success) {
+            set((state) => ({
+              audioConfig: { ...state.audioConfig, enableAudio: true }
+            }));
+          }
+          return success;
+        } catch (error) {
+          console.warn('Failed to initialize audio:', error);
+          return false;
+        }
+      },
+
+      updateAudioConfig: (config: Partial<AudioConfig>) => {
+        set((state) => {
+          const newConfig = { ...state.audioConfig, ...config };
+          audioManager.updateConfig(newConfig);
+          return { audioConfig: newConfig };
+        });
+      },
+
+      toggleMute: (): boolean => {
+        const muted = audioManager.toggleMute();
+        set((state) => ({
+          audioConfig: { ...state.audioConfig, muted }
+        }));
+        return muted;
+      },
+
+      playGameSound: (soundId: SoundId, options?: PlaySoundOptions) => {
+        const state = get();
+        if (state.audioConfig.enableAudio && !state.audioConfig.muted) {
+          audioManager.playSound(soundId, options);
+        }
+      },
+
+      playBackgroundMusic: (musicId: string) => {
+        const state = get();
+        console.log('gameStore.playBackgroundMusic() called', {
+          musicId,
+          enableAudio: state.audioConfig.enableAudio,
+          muted: state.audioConfig.muted,
+          audioConfig: state.audioConfig
+        });
+        if (state.audioConfig.enableAudio && !state.audioConfig.muted) {
+          console.log('Calling audioManager.playMusic()...');
+          audioManager.playMusic(musicId as any);
+        } else {
+          console.log('Music blocked by gameStore conditions');
+        }
+      },
+
+      pauseMusic: () => {
+        audioManager.pauseMusic();
+      },
+
+      resumeMusic: () => {
+        audioManager.resumeMusic();
+      },
+    };
+
+    return {
+      // Use centralized initial state
+      ...getInitialGameState(),
+
+      // Return stable action references
+      ...actions,
+    };
+  })
+);
+
+// Selector hooks for performance optimization with stable references
+export const usePlayer = () => useGameStore((state) => state.player);
+export const useEnemies = () => useGameStore((state) => state.enemies);
+export const useBullets = () => useGameStore((state) => state.bullets);
+// Individual selectors to avoid object recreation and infinite loops
+export const useIsRunning = () => useGameStore((state) => state.isRunning);
+export const useIsPaused = () => useGameStore((state) => state.isPaused);
+export const useIsGameOver = () => useGameStore((state) => state.isGameOver);
+export const useScore = () => useGameStore((state) => state.score);
+export const useLives = () => useGameStore((state) => state.lives);
+export const useLevel = () => useGameStore((state) => state.level);
+export const useHighScore = () => useGameStore((state) => state.highScore);
+
+// Combined selector for backwards compatibility - use individual selectors when possible
+export const useGameState = () => {
+  const isRunning = useIsRunning();
+  const isPaused = useIsPaused();
+  const isGameOver = useIsGameOver();
+  const score = useScore();
+  const lives = useLives();
+  const level = useLevel();
+  const highScore = useHighScore();
+
+  return { isRunning, isPaused, isGameOver, score, lives, level, highScore };
+};
+export const useInput = () => useGameStore((state) => state.input);
+export const useGameTime = () => useGameStore((state) => state.gameTime);
+export const useAudioConfig = () => useGameStore((state) => state.audioConfig);
+
+// Individual action selectors to prevent re-renders - use specific actions instead
+export const useResetGame = () => useGameStore((state) => state.resetGame);
+export const useStartGame = () => useGameStore((state) => state.startGame);
+export const usePauseGame = () => useGameStore((state) => state.pauseGame);
+export const useResumeGame = () => useGameStore((state) => state.resumeGame);
+
+// For components that need multiple actions - actions are stable in Zustand
+export const useGameActions = () =>
+  useGameStore((state) => ({
+    initializeGame: state.initializeGame,
+    startGame: state.startGame,
+    pauseGame: state.pauseGame,
+    resumeGame: state.resumeGame,
+    endGame: state.endGame,
+    resetGame: state.resetGame,
+    checkGameOver: state.checkGameOver,
+    updatePlayerPosition: state.updatePlayerPosition,
+    updatePlayerHealth: state.updatePlayerHealth,
+    updatePlayerShield: state.updatePlayerShield,
+    regenerateShield: state.regenerateShield,
+    damageShield: state.damageShield,
+    addEnemy: state.addEnemy,
+    removeEnemy: state.removeEnemy,
+    addBullet: state.addBullet,
+    removeBullet: state.removeBullet,
+    updateScore: state.updateScore,
+    updateLives: state.updateLives,
+    updateLevel: state.updateLevel,
+    updateGameTime: state.updateGameTime,
+    updateBackgroundOffset: state.updateBackgroundOffset,
+    updateEntities: state.updateEntities,
+    cleanupInactiveEntities: state.cleanupInactiveEntities,
+    addScreenEffect: state.addScreenEffect,
+    updateScreenEffects: state.updateScreenEffects,
+    addKey: state.addKey,
+    removeKey: state.removeKey,
+    updateMouse: state.updateMouse,
+    updateTouch: state.updateTouch,
+    initializeAudio: state.initializeAudio,
+    updateAudioConfig: state.updateAudioConfig,
+    toggleMute: state.toggleMute,
+    playGameSound: state.playGameSound,
+    playBackgroundMusic: state.playBackgroundMusic,
+    pauseMusic: state.pauseMusic,
+    resumeMusic: state.resumeMusic,
+  }));
