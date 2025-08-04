@@ -276,7 +276,8 @@ export class CollisionSystem {
     if (newLives <= 0) {
       // Play game over sound
       gameState.playGameSound('game_over', { volume: 1.0 });
-      gameState.endGame();
+      // Explicitly call checkGameOver when lives reach 0
+      gameState.checkGameOver();
     } else {
       // Respawn player after delay
       setTimeout(() => {
