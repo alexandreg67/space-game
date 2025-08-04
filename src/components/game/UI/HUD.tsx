@@ -97,12 +97,14 @@ export default function HUD({ width, height }: HUDProps) {
         fontStyle="bold"
       />
 
-      {/* Audio Controls */}
-      <AudioControls
-        x={width - 25}
-        y={20}
-        size={20}
-      />
+      {/* Audio Controls Panel - Top Left */}
+      <Group>
+        <AudioControls
+          x={25}
+          y={20}
+          size={20}
+        />
+      </Group>
 
       {/* Shield Bar (using the original health bar position) */}
       {player && (

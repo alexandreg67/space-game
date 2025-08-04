@@ -19,6 +19,7 @@ import ShieldZone from "./ShieldZone";
 import ScreenEffects from "./effects/ScreenEffects";
 import ParticleLayer from "./ParticleLayer";
 import HUD from "./UI/HUD";
+import GameOverScreen from "./UI/GameOverScreen";
 import { useGameAudio } from "@/hooks/useGameAudio";
 
 interface GameCanvasProps {
@@ -36,8 +37,15 @@ export default function GameCanvas({
   const lastShotTimeRef = useRef<number>(0);
   const shootCooldown = 150; // milliseconds between shots
 
-  const { isRunning, isPaused, player, enemies, bullets, input, level, backgroundOffset } =
-    useGameStore();
+  const isRunning = useGameStore((state) => state.isRunning);
+  const isPaused = useGameStore((state) => state.isPaused);
+  const isGameOver = useGameStore((state) => state.isGameOver);
+  const player = useGameStore((state) => state.player);
+  const enemies = useGameStore((state) => state.enemies);
+  const bullets = useGameStore((state) => state.bullets);
+  const input = useGameStore((state) => state.input);
+  const level = useGameStore((state) => state.level);
+  const backgroundOffset = useGameStore((state) => state.backgroundOffset);
   
   // Track pool initialization state to prevent timing issues
   const [poolsInitialized, setPoolsInitialized] = useState(false);
@@ -393,6 +401,9 @@ export default function GameCanvas({
       // Update shield system
       shieldSystem.update(deltaTime);
 
+      // Check for game over condition
+      useGameStore.getState().checkGameOver();
+
       // Update screen effects (cleanup expired effects)
       useGameStore.getState().updateScreenEffects(currentTime);
 
@@ -515,6 +526,11 @@ export default function GameCanvas({
             <p className="text-lg">Press ESC to resume</p>
           </div>
         </div>
+      )}
+
+      {/* Game Over Screen */}
+      {isGameOver && (
+        <GameOverScreen width={width} height={height} />
       )}
     </div>
   );

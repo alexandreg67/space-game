@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type {
@@ -12,6 +13,7 @@ import type {
   ScreenEffect,
 } from "@/types/game";
 import type { Particle } from "@/lib/game/utils/objectPool";
+import { poolManager } from "@/lib/game/utils/objectPool";
 import type { AudioConfig, SoundId, PlaySoundOptions } from "@/lib/audio/audioConfig";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { DEFAULT_AUDIO_CONFIG } from "@/lib/audio/audioConfig";
@@ -49,6 +51,10 @@ interface GameStore extends GameState {
   // Shield particles
   shieldParticles: Particle[];
 
+  // Game Over state
+  isGameOver: boolean;
+  highScore: number;
+
   // Actions
   initializeGame: () => void;
   startGame: () => void;
@@ -56,6 +62,7 @@ interface GameStore extends GameState {
   resumeGame: () => void;
   endGame: () => void;
   resetGame: () => void;
+  checkGameOver: () => void;
 
   // Player actions
   createPlayer: () => void;
@@ -144,25 +151,37 @@ const defaultInputState: InputState = {
   touch: { x: 0, y: 0, active: false },
 };
 
+// Centralized initial game state for consistent resets
+const getInitialGameState = () => ({
+  isRunning: false,
+  isPaused: false,
+  isGameOver: false,
+  score: 0,
+  lives: 3,
+  level: 1,
+  gameTime: 0,
+  highScore: typeof window !== 'undefined' 
+    ? parseInt(localStorage.getItem('spaceGameHighScore') || '0') 
+    : 0,
+  player: null,
+  enemies: [],
+  bullets: [],
+  powerups: [],
+  screenEffects: [],
+  shieldParticles: [],
+  input: { ...defaultInputState, keys: new Set<string>() },
+  config: defaultConfig,
+  audioConfig: DEFAULT_AUDIO_CONFIG,
+  backgroundOffset: 0,
+});
+
 export const useGameStore = create<GameStore>()(
   subscribeWithSelector((set, get) => {
     const actions = {
       // Game lifecycle
       initializeGame: () => {
-        set({
-          isRunning: false,
-          isPaused: false,
-          score: 0,
-          lives: 3,
-          level: 1,
-          gameTime: 0,
-          enemies: [],
-          bullets: [],
-          powerups: [],
-          screenEffects: [],
-          shieldParticles: [],
-          input: { ...defaultInputState, keys: new Set() },
-        });
+        const initialState = getInitialGameState();
+        set(initialState);
         actions.createPlayer();
       },
 
@@ -183,7 +202,49 @@ export const useGameStore = create<GameStore>()(
       },
 
       resetGame: () => {
-        actions.initializeGame();
+        const currentState = get();
+        
+        // Save high score before reset
+        const newHighScore = Math.max(currentState.score, currentState.highScore);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('spaceGameHighScore', newHighScore.toString());
+        }
+
+        // Release all active entities back to their object pools
+        try {
+          poolManager.releaseAll();
+        } catch (error) {
+          console.warn('Error releasing objects to pools during reset:', error);
+        }
+
+        // Reset to initial state
+        const initialState = getInitialGameState();
+        set({
+          ...initialState,
+          highScore: newHighScore,
+          isGameOver: false,
+        });
+        
+        // Create new player
+        actions.createPlayer();
+      },
+
+      checkGameOver: () => {
+        const state = get();
+        if (state.player && state.player.health <= 0 && state.lives <= 0) {
+          set({ 
+            isRunning: false, 
+            isGameOver: true,
+            isPaused: false 
+          });
+          
+          // Save high score
+          const newHighScore = Math.max(state.score, state.highScore);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('spaceGameHighScore', newHighScore.toString());
+          }
+          set({ highScore: newHighScore });
+        }
       },
 
       // Player management
@@ -629,25 +690,8 @@ export const useGameStore = create<GameStore>()(
     };
 
     return {
-      // Initial state
-      isRunning: false,
-      isPaused: false,
-      score: 0,
-      lives: 3,
-      level: 1,
-      gameTime: 0,
-
-      player: null,
-      enemies: [],
-      bullets: [],
-      powerups: [],
-
-      input: defaultInputState,
-      config: defaultConfig,
-      audioConfig: DEFAULT_AUDIO_CONFIG,
-      backgroundOffset: 0,
-      screenEffects: [],
-      shieldParticles: [],
+      // Use centralized initial state
+      ...getInitialGameState(),
 
       // Return stable action references
       ...actions,
@@ -662,17 +706,28 @@ export const useBullets = () => useGameStore((state) => state.bullets);
 export const useGameState = () => {
   const isRunning = useGameStore((state) => state.isRunning);
   const isPaused = useGameStore((state) => state.isPaused);
+  const isGameOver = useGameStore((state) => state.isGameOver);
   const score = useGameStore((state) => state.score);
   const lives = useGameStore((state) => state.lives);
   const level = useGameStore((state) => state.level);
+  const highScore = useGameStore((state) => state.highScore);
 
-  return { isRunning, isPaused, score, lives, level };
+  return useMemo(
+    () => ({ isRunning, isPaused, isGameOver, score, lives, level, highScore }),
+    [isRunning, isPaused, isGameOver, score, lives, level, highScore]
+  );
 };
 export const useInput = () => useGameStore((state) => state.input);
 export const useGameTime = () => useGameStore((state) => state.gameTime);
 export const useAudioConfig = () => useGameStore((state) => state.audioConfig);
 
-// Stable action selectors to prevent re-renders
+// Individual action selectors to prevent re-renders - use specific actions instead
+export const useResetGame = () => useGameStore((state) => state.resetGame);
+export const useStartGame = () => useGameStore((state) => state.startGame);
+export const usePauseGame = () => useGameStore((state) => state.pauseGame);
+export const useResumeGame = () => useGameStore((state) => state.resumeGame);
+
+// For components that need multiple actions - actions are stable in Zustand
 export const useGameActions = () =>
   useGameStore((state) => ({
     initializeGame: state.initializeGame,
@@ -681,6 +736,7 @@ export const useGameActions = () =>
     resumeGame: state.resumeGame,
     endGame: state.endGame,
     resetGame: state.resetGame,
+    checkGameOver: state.checkGameOver,
     updatePlayerPosition: state.updatePlayerPosition,
     updatePlayerHealth: state.updatePlayerHealth,
     updatePlayerShield: state.updatePlayerShield,
