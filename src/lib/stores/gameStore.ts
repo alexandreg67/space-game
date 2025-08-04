@@ -458,10 +458,7 @@ export const useGameStore = create<GameStore>()(
       updateLives: (lives: number) => {
         const newLives = Math.max(0, lives);
         set({ lives: newLives });
-        // Automatically check for game over when lives change
-        if (newLives <= 0) {
-          actions.checkGameOver();
-        }
+        // Note: checkGameOver is handled separately to avoid recursion
       },
 
       updateLevel: (level: number) => {
@@ -715,17 +712,26 @@ export const useGameStore = create<GameStore>()(
 export const usePlayer = () => useGameStore((state) => state.player);
 export const useEnemies = () => useGameStore((state) => state.enemies);
 export const useBullets = () => useGameStore((state) => state.bullets);
+// Individual selectors to avoid object recreation and infinite loops
+export const useIsRunning = () => useGameStore((state) => state.isRunning);
+export const useIsPaused = () => useGameStore((state) => state.isPaused);
+export const useIsGameOver = () => useGameStore((state) => state.isGameOver);
+export const useScore = () => useGameStore((state) => state.score);
+export const useLives = () => useGameStore((state) => state.lives);
+export const useLevel = () => useGameStore((state) => state.level);
+export const useHighScore = () => useGameStore((state) => state.highScore);
+
+// Combined selector for backwards compatibility - use individual selectors when possible
 export const useGameState = () => {
-  // Simple selector without memoization - Zustand handles optimization internally
-  return useGameStore((state) => ({
-    isRunning: state.isRunning,
-    isPaused: state.isPaused,
-    isGameOver: state.isGameOver,
-    score: state.score,
-    lives: state.lives,
-    level: state.level,
-    highScore: state.highScore
-  }));
+  const isRunning = useIsRunning();
+  const isPaused = useIsPaused();
+  const isGameOver = useIsGameOver();
+  const score = useScore();
+  const lives = useLives();
+  const level = useLevel();
+  const highScore = useHighScore();
+
+  return { isRunning, isPaused, isGameOver, score, lives, level, highScore };
 };
 export const useInput = () => useGameStore((state) => state.input);
 export const useGameTime = () => useGameStore((state) => state.gameTime);
