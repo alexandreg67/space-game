@@ -3,12 +3,14 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useGameState, useResetGame } from "@/lib/stores/gameStore";
 
+// GameOverScreen is responsive and doesn't need fixed dimensions
+// Props kept for API consistency but not used as component uses viewport-based sizing
 interface GameOverScreenProps {
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
 }
 
-export default function GameOverScreen({ width: _width, height: _height }: GameOverScreenProps) {
+export default function GameOverScreen(_props: GameOverScreenProps) {
   const { score, highScore, isGameOver } = useGameState();
   const resetGame = useResetGame();
   const restartButtonRef = useRef<HTMLButtonElement>(null);

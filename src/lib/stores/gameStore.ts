@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type {
@@ -17,6 +16,9 @@ import { poolManager } from "@/lib/game/utils/objectPool";
 import type { AudioConfig, SoundId, PlaySoundOptions } from "@/lib/audio/audioConfig";
 import { audioManager } from "@/lib/audio/AudioManager";
 import { DEFAULT_AUDIO_CONFIG } from "@/lib/audio/audioConfig";
+
+// Utility function for SSR safety
+const isBrowser = () => typeof window !== 'undefined';
 
 // Helper function to calculate shield status flags based on health
 function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
@@ -160,7 +162,7 @@ const getInitialGameState = () => ({
   lives: 3,
   level: 1,
   gameTime: 0,
-  highScore: typeof window !== 'undefined' 
+  highScore: isBrowser() 
     ? parseInt(localStorage.getItem('spaceGameHighScore') || '0') 
     : 0,
   player: null,
@@ -206,7 +208,7 @@ export const useGameStore = create<GameStore>()(
         
         // Save high score before reset
         const newHighScore = Math.max(currentState.score, currentState.highScore);
-        if (typeof window !== 'undefined') {
+        if (isBrowser()) {
           localStorage.setItem('spaceGameHighScore', newHighScore.toString());
         }
 
@@ -231,7 +233,8 @@ export const useGameStore = create<GameStore>()(
 
       checkGameOver: () => {
         const state = get();
-        if (state.player && state.player.health <= 0 && state.lives <= 0) {
+        // Game over when lives reach 0 (health management is handled by CollisionSystem)
+        if (state.lives <= 0) {
           set({ 
             isRunning: false, 
             isGameOver: true,
@@ -240,7 +243,7 @@ export const useGameStore = create<GameStore>()(
           
           // Save high score
           const newHighScore = Math.max(state.score, state.highScore);
-          if (typeof window !== 'undefined') {
+          if (isBrowser()) {
             localStorage.setItem('spaceGameHighScore', newHighScore.toString());
           }
           set({ highScore: newHighScore });
@@ -704,18 +707,16 @@ export const usePlayer = () => useGameStore((state) => state.player);
 export const useEnemies = () => useGameStore((state) => state.enemies);
 export const useBullets = () => useGameStore((state) => state.bullets);
 export const useGameState = () => {
-  const isRunning = useGameStore((state) => state.isRunning);
-  const isPaused = useGameStore((state) => state.isPaused);
-  const isGameOver = useGameStore((state) => state.isGameOver);
-  const score = useGameStore((state) => state.score);
-  const lives = useGameStore((state) => state.lives);
-  const level = useGameStore((state) => state.level);
-  const highScore = useGameStore((state) => state.highScore);
-
-  return useMemo(
-    () => ({ isRunning, isPaused, isGameOver, score, lives, level, highScore }),
-    [isRunning, isPaused, isGameOver, score, lives, level, highScore]
-  );
+  // Simple selector without memoization - Zustand handles optimization internally
+  return useGameStore((state) => ({
+    isRunning: state.isRunning,
+    isPaused: state.isPaused,
+    isGameOver: state.isGameOver,
+    score: state.score,
+    lives: state.lives,
+    level: state.level,
+    highScore: state.highScore
+  }));
 };
 export const useInput = () => useGameStore((state) => state.input);
 export const useGameTime = () => useGameStore((state) => state.gameTime);

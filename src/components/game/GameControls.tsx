@@ -73,29 +73,6 @@ export default function GameControls({ isGameRunning, isPaused }: GameControlsPr
           </button>
         )}
 
-        {/* Help/Instructions Toggle - for future expansion */}
-        <button
-          className="group relative px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500/50"
-          aria-label="Show help"
-        >
-          <span className="flex items-center gap-2">
-            <span className="text-lg">❓</span>
-            Help
-          </span>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-        </button>
-
-        {/* Settings Button - for future expansion */}
-        <button
-          className="group relative px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-500/50"
-          aria-label="Game settings"
-        >
-          <span className="flex items-center gap-2">
-            <span className="text-lg">⚙️</span>
-            Settings
-          </span>
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-500/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-        </button>
       </div>
 
       {/* Game Status Indicator */}
