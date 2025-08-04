@@ -20,6 +20,11 @@ import { DEFAULT_AUDIO_CONFIG } from "@/lib/audio/audioConfig";
 // Utility function for SSR safety
 const isBrowser = () => typeof window !== 'undefined';
 
+// Initialize high score once to avoid repeated SSR checks
+const initialHighScore = isBrowser() 
+  ? parseInt(localStorage.getItem('spaceGameHighScore') || '0') 
+  : 0;
+
 // Helper function to calculate shield status flags based on health
 function calculateShieldFlags(currentShieldDown: boolean, newShieldHealth: number) {
   return {
@@ -147,11 +152,12 @@ const defaultConfig: GameConfig = {
   flashIntensityLimit: 0.6, // Maximum flash opacity (0.6 = 60% for accessibility)
 };
 
-const defaultInputState: InputState = {
-  keys: new Set(),
+// Factory function to create fresh input state with new Set instance
+const createDefaultInputState = (): InputState => ({
+  keys: new Set<string>(),
   mouse: { x: 0, y: 0, pressed: false },
   touch: { x: 0, y: 0, active: false },
-};
+});
 
 // Centralized initial game state for consistent resets
 const getInitialGameState = () => ({
@@ -162,16 +168,14 @@ const getInitialGameState = () => ({
   lives: 3,
   level: 1,
   gameTime: 0,
-  highScore: isBrowser() 
-    ? parseInt(localStorage.getItem('spaceGameHighScore') || '0') 
-    : 0,
+  highScore: initialHighScore,
   player: null,
   enemies: [],
   bullets: [],
   powerups: [],
   screenEffects: [],
   shieldParticles: [],
-  input: { ...defaultInputState, keys: new Set<string>() },
+  input: createDefaultInputState(),
   config: defaultConfig,
   audioConfig: DEFAULT_AUDIO_CONFIG,
   backgroundOffset: 0,
@@ -452,7 +456,12 @@ export const useGameStore = create<GameStore>()(
       },
 
       updateLives: (lives: number) => {
-        set({ lives: Math.max(0, lives) });
+        const newLives = Math.max(0, lives);
+        set({ lives: newLives });
+        // Automatically check for game over when lives change
+        if (newLives <= 0) {
+          actions.checkGameOver();
+        }
       },
 
       updateLevel: (level: number) => {

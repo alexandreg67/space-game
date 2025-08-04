@@ -401,9 +401,6 @@ export default function GameCanvas({
       // Update shield system
       shieldSystem.update(deltaTime);
 
-      // Check for game over condition
-      useGameStore.getState().checkGameOver();
-
       // Update screen effects (cleanup expired effects)
       useGameStore.getState().updateScreenEffects(currentTime);
 
