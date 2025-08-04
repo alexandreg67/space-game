@@ -28,8 +28,10 @@ export default function AudioControls({ x, y, size = 24 }: AudioControlsProps) {
         // Import audioManager for testing
         import('@/lib/audio/AudioManager').then(({ audioManager }) => {
           audioManager.testAudio();
-          // Visual confirmation
-          alert('Audio test lancé ! Vérifiez la console pour les logs détaillés.');
+          // Visual confirmation in development only
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Audio test completed! Check console for detailed logs.');
+          }
         });
       }
     }

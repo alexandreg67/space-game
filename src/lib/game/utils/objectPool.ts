@@ -285,7 +285,7 @@ export function initializePools(): void {
   
   poolsInitialized = true;
   if (process.env.NODE_ENV === 'development') {
-    console.log('Object pools initialized successfully');
+    // Object pools initialized successfully
   }
 }
 
