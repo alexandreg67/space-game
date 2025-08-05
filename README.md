@@ -234,13 +234,6 @@ Ce projet démontre ma maîtrise des technologies web modernes appliquées au d�
 
 ---
 
-**🔗 Liens**
-- [Portfolio](https://votre-portfolio.com)
-- [LinkedIn](https://linkedin.com/in/votre-profil)
-- [GitHub](https://github.com/votre-username)
-
----
-
 <div align="center">
 <strong>⭐ Si ce projet vous intéresse, n'hésitez pas à le mettre en favoris !</strong>
 </div>
